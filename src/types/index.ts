@@ -38,24 +38,57 @@ export interface Announcement {
     editedAt?: Date;
 }
 
+export interface Victim {
+    name: string;
+    photo: string;
+    age: number;
+    occupation: string;
+    bio: string;
+    lastSeen: string;
+}
+
+export interface Suspect {
+    id: string;
+    name: string;
+    photo: string;
+    age: number;
+    occupation: string;
+    relationship: string;
+    alibi: string;
+    motive: string;
+    isCulprit: boolean;
+}
+
+export interface Evidence {
+    id: string;
+    title: string;
+    description: string;
+    image?: string;
+    foundAt: string;
+    unlockClueId?: string;
+    relatedSuspectId?: string;
+}
+
 export interface MysteryData {
     id: 'current';
     active: boolean;
-    victim: {
-        name: string;
-        photo: string;
-        bio: string;
-    };
-    evidence: Array<{
-        title: string;
-        description: string;
-        image?: string;
-    }>;
-    suspects: Array<{
-        name: string;
-        photo: string;
-        alibi: string;
-    }>;
+    startClueId?: string; // New: Clue that triggers mystery start/theme change
+    revealed: boolean;
+    revealedAt?: Date;
+    victim: Victim;
+    suspects: Suspect[];
+    evidence: Evidence[];
+}
+
+export interface Accusation {
+    id: string;
+    teamId: string;
+    teamName: string;
+    suspectId: string;
+    suspectName: string;
+    reasoning?: string;
+    submittedAt: Date;
+    correct: boolean;
 }
 
 export interface User {

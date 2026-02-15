@@ -2,7 +2,11 @@ import { Trophy, Crown, Award } from 'lucide-react';
 import { useTeams, useClues } from '../../hooks/useFirestore';
 import type { Team } from '../../types';
 
-export default function Leaderboard() {
+interface LeaderboardProps {
+    isMysteryTheme?: boolean;
+}
+
+export default function Leaderboard({ isMysteryTheme }: LeaderboardProps) {
     const { teams: leaderboard, loading } = useTeams();
     const { clues } = useClues();
 
@@ -11,8 +15,8 @@ export default function Leaderboard() {
     if (loading) {
         return (
             <div className="p-6 text-center">
-                <Trophy className="w-10 h-10 mb-2 animate-pulse mx-auto text-primary-500" />
-                <p className="text-gray-700">Loading rankings...</p>
+                <Trophy className={`w-10 h-10 mb-2 animate-pulse mx-auto ${isMysteryTheme ? 'text-purple-500' : 'text-primary-500'}`} />
+                <p className={isMysteryTheme ? 'text-slate-400' : 'text-gray-700'}>Loading rankings...</p>
             </div>
         );
     }
@@ -39,19 +43,19 @@ export default function Leaderboard() {
                             <div
                                 key={team.id}
                                 className={`glass rounded-2xl p-4 flex items-center transition-all hover:shadow-xl ${index === 0
-                                        ? 'border-2 border-yellow-400 shadow-glow-accent'
-                                        : 'border border-white/30'
+                                    ? 'border-2 border-yellow-400 shadow-glow-accent'
+                                    : 'border border-white/30'
                                     }`}
                             >
                                 {/* Rank badge */}
                                 <div
                                     className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${index === 0
-                                            ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg'
-                                            : index === 1
-                                                ? 'bg-gradient-to-br from-gray-300 to-gray-500'
-                                                : index === 2
-                                                    ? 'bg-gradient-to-br from-amber-500 to-amber-700'
-                                                    : 'bg-gradient-primary'
+                                        ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg'
+                                        : index === 1
+                                            ? 'bg-gradient-to-br from-gray-300 to-gray-500'
+                                            : index === 2
+                                                ? 'bg-gradient-to-br from-amber-500 to-amber-700'
+                                                : 'bg-gradient-primary'
                                         }`}
                                 >
                                     {index + 1}

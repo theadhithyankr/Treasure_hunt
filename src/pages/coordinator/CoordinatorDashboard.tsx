@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, Check, Megaphone } from 'lucide-react';
+import { Users, FileText, Check, Megaphone, Search } from 'lucide-react';
 import TeamManagement from '../../components/coordinator/TeamManagement';
 import ClueManagement from '../../components/coordinator/ClueManagement';
 import SubmissionQueue from '../../components/coordinator/SubmissionQueue';
 import BroadcastPanel from '../../components/coordinator/BroadcastPanel';
+import MysteryManagement from '../../components/coordinator/MysteryManagement';
 import { useTeams, useClues, useSubmissions } from '../../hooks/useFirestore';
 
-type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast';
+type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast' | 'mystery';
 
 export default function CoordinatorDashboard() {
     const { signOut } = useAuth();
@@ -63,6 +64,10 @@ export default function CoordinatorDashboard() {
                 {activeTab === 'broadcast' && (
                     <BroadcastPanel />
                 )}
+
+                {activeTab === 'mystery' && (
+                    <MysteryManagement />
+                )}
             </main>
 
             {/* Bottom Navigation */}
@@ -71,8 +76,8 @@ export default function CoordinatorDashboard() {
                     <button
                         onClick={() => setActiveTab('teams')}
                         className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'teams'
-                                ? 'bg-gradient-primary text-white shadow-glow-primary'
-                                : 'text-gray-600 hover:bg-primary-50'
+                            ? 'bg-gradient-primary text-white shadow-glow-primary'
+                            : 'text-gray-600 hover:bg-primary-50'
                             }`}
                     >
                         <Users className="w-6 h-6" />
@@ -82,8 +87,8 @@ export default function CoordinatorDashboard() {
                     <button
                         onClick={() => setActiveTab('clues')}
                         className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'clues'
-                                ? 'bg-gradient-primary text-white shadow-glow-primary'
-                                : 'text-gray-600 hover:bg-primary-50'
+                            ? 'bg-gradient-primary text-white shadow-glow-primary'
+                            : 'text-gray-600 hover:bg-primary-50'
                             }`}
                     >
                         <FileText className="w-6 h-6" />
@@ -93,8 +98,8 @@ export default function CoordinatorDashboard() {
                     <button
                         onClick={() => setActiveTab('submissions')}
                         className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all relative ${activeTab === 'submissions'
-                                ? 'bg-gradient-primary text-white shadow-glow-primary'
-                                : 'text-gray-600 hover:bg-primary-50'
+                            ? 'bg-gradient-primary text-white shadow-glow-primary'
+                            : 'text-gray-600 hover:bg-primary-50'
                             }`}
                     >
                         {pendingSubmissions.length > 0 && (
@@ -109,12 +114,23 @@ export default function CoordinatorDashboard() {
                     <button
                         onClick={() => setActiveTab('broadcast')}
                         className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'broadcast'
-                                ? 'bg-gradient-primary text-white shadow-glow-primary'
-                                : 'text-gray-600 hover:bg-primary-50'
+                            ? 'bg-gradient-primary text-white shadow-glow-primary'
+                            : 'text-gray-600 hover:bg-primary-50'
                             }`}
                     >
                         <Megaphone className="w-6 h-6" />
                         <span className="text-xs mt-1 font-semibold">News</span>
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('mystery')}
+                        className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'mystery'
+                            ? 'bg-gradient-primary text-white shadow-glow-primary'
+                            : 'text-gray-600 hover:bg-primary-50'
+                            }`}
+                    >
+                        <Search className="w-6 h-6" />
+                        <span className="text-xs mt-1 font-semibold">Mystery</span>
                     </button>
                 </div>
             </nav>

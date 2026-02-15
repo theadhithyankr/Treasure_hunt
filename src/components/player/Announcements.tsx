@@ -11,7 +11,11 @@ interface Announcement {
     priority: 'low' | 'medium' | 'high';
 }
 
-export default function Announcements() {
+interface AnnouncementsProps {
+    isMysteryTheme?: boolean;
+}
+
+export default function Announcements({ isMysteryTheme }: AnnouncementsProps) {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -68,15 +72,15 @@ export default function Announcements() {
     return (
         <div className="px-4 py-6">
             <h2 className="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
-                <Megaphone className="w-6 h-6 text-primary-500" />
-                <span className="bg-gradient-primary bg-clip-text text-transparent">Announcements</span>
+                <Megaphone className={`w-6 h-6 ${isMysteryTheme ? 'text-purple-500' : 'text-primary-500'}`} />
+                <span className={isMysteryTheme ? 'text-white' : 'bg-gradient-primary bg-clip-text text-transparent'}>Announcements</span>
             </h2>
 
             {announcements.length === 0 ? (
-                <div className="card text-center py-12">
-                    <Megaphone className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">No Announcements Yet</h3>
-                    <p className="text-gray-500 text-sm">
+                <div className={`card text-center py-12 ${isMysteryTheme ? 'bg-slate-800 border-slate-700' : ''}`}>
+                    <Megaphone className={`w-16 h-16 mx-auto mb-4 ${isMysteryTheme ? 'text-slate-600' : 'text-gray-300'}`} />
+                    <h3 className={`text-lg font-semibold mb-2 ${isMysteryTheme ? 'text-slate-300' : 'text-gray-700'}`}>No Announcements Yet</h3>
+                    <p className={`text-sm ${isMysteryTheme ? 'text-slate-500' : 'text-gray-500'}`}>
                         Check back later for updates from coordinators
                     </p>
                 </div>
@@ -85,21 +89,24 @@ export default function Announcements() {
                     {announcements.map((announcement) => (
                         <div
                             key={announcement.id}
-                            className={`glass rounded-2xl p-4 border-l-4 ${getPriorityColor(announcement.priority)}`}
+                            className={`rounded-2xl p-4 border-l-4 ${isMysteryTheme
+                                    ? 'bg-slate-800/80 backdrop-blur-sm border-purple-500'
+                                    : `glass ${getPriorityColor(announcement.priority)}`
+                                }`}
                         >
                             <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0 mt-1">
                                     {getPriorityIcon(announcement.priority)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="font-bold text-lg text-gray-900 mb-1">
+                                    <h3 className={`font-bold text-lg mb-1 ${isMysteryTheme ? 'text-slate-100' : 'text-gray-900'}`}>
                                         {announcement.title}
                                     </h3>
-                                    <p className="text-gray-700 text-sm leading-relaxed">
+                                    <p className={`text-sm leading-relaxed ${isMysteryTheme ? 'text-slate-300' : 'text-gray-700'}`}>
                                         {announcement.message}
                                     </p>
                                     {announcement.createdAt && (
-                                        <p className="text-xs text-gray-500 mt-2">
+                                        <p className={`text-xs mt-2 ${isMysteryTheme ? 'text-slate-500' : 'text-gray-500'}`}>
                                             {new Date(announcement.createdAt.toDate()).toLocaleString()}
                                         </p>
                                     )}
