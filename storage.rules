@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Submissions folder - allow anyone to read and write
+    match /submissions/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Clues folder - allow anyone to read and write
+    match /clues/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Default - deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

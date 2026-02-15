@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Pirata+One&family=Creepster&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply tap-highlight-none;
+  }
+
+  body {
+    @apply font-sans bg-treasure-50 text-gray-900 antialiased;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+  }
+
+  html {
+    height: -webkit-fill-available;
+  }
+
+  button {
+    @apply touch-manipulation;
+  }
+
+  input,
+  textarea {
+    @apply touch-manipulation;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply w-full py-4 px-6 bg-gradient-to-r from-treasure-500 to-ocean-500 text-white font-bold text-lg rounded-xl shadow-lg hover:from-treasure-600 hover:to-ocean-600 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 44px;
+  }
+
+  .btn-secondary {
+    @apply w-full py-4 px-6 bg-white text-treasure-700 font-bold text-lg rounded-xl shadow-lg border-2 border-treasure-400 hover:bg-treasure-50 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 44px;
+  }
+
+  .btn-danger {
+    @apply w-full py-4 px-6 bg-gradient-to-r from-red-600 to-red-700 text-white font-bold text-lg rounded-xl shadow-lg hover:from-red-700 hover:to-red-800 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 44px;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-xl p-6 border border-treasure-100;
+  }
+
+  .input-field {
+    @apply w-full p-4 text-lg border-2 border-treasure-200 rounded-xl focus:border-treasure-500 focus:ring-4 focus:ring-treasure-100 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all;
+    min-height: 44px;
+  }
+
+  .clue-card {
+    @apply bg-gradient-to-br from-white to-treasure-50 rounded-2xl shadow-2xl p-6 border-2 border-treasure-300;
+  }
+
+  .mystery-card {
+    @apply bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl shadow-2xl p-6 border-2 border-purple-600 text-white;
+  }
+}

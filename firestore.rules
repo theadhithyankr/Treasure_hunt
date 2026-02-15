@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is coordinator
+    function isCoordinator() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'coordinator';
+    }
+    
+    // Users collection - allow anyone to create (for player sessions)
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Teams collection - anyone can read, anyone can create/update
+    match /teams/{teamId} {
+      allow read: if true;
+      allow create: if true;  // Allow script to create teams
+      allow update: if true;  // Allow updating completedClues
+      allow delete: if request.auth != null;
+    }
+    
+    // Clues collection - anyone can read, anyone can create
+    match /clues/{clueId} {
+      allow read: if true;
+      allow create: if true;  // Allow script to create clues
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Submissions - anyone can create and read
+    match /submissions/{submissionId} {
+      allow read: if true;
+      allow create: if true;  // Allow players to submit
+      allow update: if true;  // Allow coordinators to approve/reject
+      allow delete: if request.auth != null;
+    }
+    
+    // Announcements - anyone can read, anyone can create
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow create: if true;  // Allow script to create announcements
+      allow update, delete: if request.auth != null;
+    }
+    
+    // Mystery data (optional feature)
+    match /mystery/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
