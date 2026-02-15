@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAnnouncements } from '../../hooks/useFirestore';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 import { formatTimestamp } from '../../utils/helpers';
+import { Megaphone, Edit2, Trash2 } from 'lucide-react';
 
 export default function BroadcastPanel() {
     const { announcements, loading } = useAnnouncements();
+    const [showForm, setShowForm] = useState(false);
+    const [editingAnnouncement, setEditingAnnouncement] = useState<any | null>(null);
+    const [title, setTitle] = useState('');
     const [message, setMessage] = useState('');
+    const [priority, setPriority] = useState<'normal' | 'high'>('normal');
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
 
@@ -18,12 +23,14 @@ export default function BroadcastPanel() {
 
         try {
             await addDoc(collection(db, 'announcements'), {
+                title: title.trim() || null,
                 message,
+                priority,
                 createdAt: serverTimestamp()
             });
 
             hapticSuccess();
-            setMessage('');
+            resetForm();
             alert('Announcement sent!');
         } catch (err: any) {
             hapticError();
@@ -33,70 +40,207 @@ export default function BroadcastPanel() {
         }
     };
 
+    const handleEditAnnouncement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingAnnouncement) return;
+
+        setError('');
+        setSending(true);
+
+        try {
+            await updateDoc(doc(db, 'announcements', editingAnnouncement.id), {
+                title: title.trim() || null,
+                message,
+                priority,
+                editedAt: serverTimestamp()
+            });
+
+            hapticSuccess();
+            resetForm();
+            alert('Announcement updated!');
+        } catch (err: any) {
+            hapticError();
+            setError(err.message || 'Failed to update announcement');
+        } finally {
+            setSending(false);
+        }
+    };
+
+    const handleDeleteAnnouncement = async (announcementId: string) => {
+        if (!confirm('Delete this announcement? This cannot be undone.')) return;
+
+        try {
+            await deleteDoc(doc(db, 'announcements', announcementId));
+            hapticSuccess();
+            alert('Announcement deleted!');
+        } catch (err: any) {
+            hapticError();
+            alert('Failed to delete announcement: ' + err.message);
+        }
+    };
+
+    const startEdit = (announcement: any) => {
+        setEditingAnnouncement(announcement);
+        setTitle(announcement.title || '');
+        setMessage(announcement.message);
+        setPriority(announcement.priority || 'normal');
+        setShowForm(true);
+    };
+
+    const resetForm = () => {
+        setTitle('');
+        setMessage('');
+        setPriority('normal');
+        setShowForm(false);
+        setEditingAnnouncement(null);
+        setError('');
+    };
+
     return (
         <div className="p-4">
-            <h2 className="text-2xl font-adventure text-treasure-700 mb-4">
-                Broadcast Announcements
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    Announcements
+                </h2>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    className="px-4 py-2 bg-gradient-primary text-white rounded-xl font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all"
+                >
+                    {showForm ? '✕ Cancel' : '+ New Announcement'}
+                </button>
+            </div>
 
             {/* Broadcast Form */}
-            <form onSubmit={handleBroadcast} className="card mb-4">
-                <h3 className="text-lg font-bold text-treasure-700 mb-3">
-                    Send Announcement
-                </h3>
+            {showForm && (
+                <form onSubmit={editingAnnouncement ? handleEditAnnouncement : handleBroadcast} className="glass rounded-3xl shadow-glass p-4 mb-4">
+                    <h3 className="text-lg font-bold text-gray-900 mb-3">
+                        {editingAnnouncement ? 'Edit Announcement' : 'Send Announcement'}
+                    </h3>
 
-                <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your announcement..."
-                    className="input-field mb-3"
-                    rows={4}
-                    required
-                    disabled={sending}
-                />
-
-                {error && (
-                    <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-3 text-sm">
-                        {error}
+                    <div className="mb-3">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Title (Optional)
+                        </label>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g., Important Update"
+                            className="input-field"
+                            disabled={sending}
+                        />
                     </div>
-                )}
 
-                <button
-                    type="submit"
-                    className="btn-primary"
-                    disabled={sending || !message.trim()}
-                >
-                    {sending ? 'Sending...' : '📢 Broadcast to All Teams'}
-                </button>
-            </form>
+                    <div className="mb-3">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Message
+                        </label>
+                        <textarea
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder="Type your announcement..."
+                            className="input-field"
+                            rows={4}
+                            required
+                            disabled={sending}
+                        />
+                    </div>
+
+                    <div className="mb-3">
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            Priority
+                        </label>
+                        <select
+                            value={priority}
+                            onChange={(e) => setPriority(e.target.value as 'normal' | 'high')}
+                            className="input-field"
+                            disabled={sending}
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg mb-3 text-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex gap-2">
+                        <button
+                            type="submit"
+                            className="flex-1 btn-primary flex items-center justify-center gap-2"
+                            disabled={sending || !message.trim()}
+                        >
+                            <Megaphone className="w-5 h-5" />
+                            {sending ? 'Sending...' : editingAnnouncement ? 'Update' : 'Broadcast to All Teams'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={resetForm}
+                            className="px-4 py-3 bg-gray-200 text-gray-700 rounded-2xl font-semibold hover:bg-gray-300 active:scale-95 transition-all"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            )}
 
             {/* Announcements History */}
-            <h3 className="text-lg font-bold text-treasure-700 mb-3">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">
                 Recent Announcements
             </h3>
 
             {loading ? (
-                <div className="text-center py-6">
-                    <div className="text-3xl mb-2 animate-pulse">📢</div>
-                    <p className="text-treasure-700">Loading...</p>
+                <div className="glass rounded-3xl shadow-glass p-6 text-center">
+                    <Megaphone className="w-10 h-10 mb-2 animate-pulse mx-auto text-primary-500" />
+                    <p className="text-gray-700">Loading...</p>
                 </div>
             ) : announcements.length === 0 ? (
-                <div className="card text-center py-8">
-                    <div className="text-5xl mb-3">📢</div>
+                <div className="glass rounded-3xl shadow-glass p-8 text-center">
+                    <Megaphone className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p className="text-gray-600">No announcements yet</p>
                 </div>
             ) : (
                 <div className="space-y-3">
                     {announcements.map((announcement) => (
-                        <div key={announcement.id} className="card">
-                            <div className="flex items-start gap-3">
-                                <span className="text-2xl">📢</span>
+                        <div key={announcement.id} className="glass rounded-3xl shadow-glass p-4">
+                            <div className="flex items-start gap-3 mb-3">
+                                <Megaphone className={`w-6 h-6 flex-shrink-0 ${announcement.priority === 'high' ? 'text-red-500' : 'text-primary-500'}`} />
                                 <div className="flex-1 min-w-0">
+                                    {announcement.title && (
+                                        <h4 className="font-bold text-gray-900 mb-1">{announcement.title}</h4>
+                                    )}
                                     <p className="text-sm text-gray-800">{announcement.message}</p>
                                     <p className="text-xs text-gray-500 mt-1">
                                         {formatTimestamp(announcement.createdAt)}
+                                        {announcement.editedAt && ' (edited)'}
                                     </p>
+                                    {announcement.priority === 'high' && (
+                                        <span className="inline-block mt-1 px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded">
+                                            High Priority
+                                        </span>
+                                    )}
                                 </div>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => startEdit(announcement)}
+                                    className="flex-1 px-3 py-2 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                                >
+                                    <Edit2 className="w-4 h-4" />
+                                    Edit
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteAnnouncement(announcement.id)}
+                                    className="flex-1 px-3 py-2 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Delete
+                                </button>
                             </div>
                         </div>
                     ))}

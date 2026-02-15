@@ -1,50 +1,101 @@
-import { useState } from 'react';
-import { useClues, useTeam } from '../../hooks/useFirestore';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import type { Clue } from '../../types';
-import { Map, Unlock, PartyPopper } from 'lucide-react';
+import { Trophy, Unlock } from 'lucide-react';
 import ClueDisplay from '../../components/player/ClueDisplay';
 import Leaderboard from '../../components/player/Leaderboard';
 import Announcements from '../../components/player/Announcements';
 import BottomNav from '../../components/player/BottomNav';
+import { useClues } from '../../hooks/useFirestore';
+import { useTeam } from '../../hooks/useFirestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
-type TabType = 'clue' | 'leaderboard' | 'announcements';
+type TabType = 'clues' | 'leaderboard' | 'announcements';
 
 export default function PlayerDashboard() {
     const { currentUser, signOut } = useAuth();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<TabType>('clue');
+    const [activeTab, setActiveTab] = useState<TabType>('clues');
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    const { team, loading: teamLoading } = useTeam(currentUser?.teamId);
     const { clues, loading: cluesLoading } = useClues();
+    const { team, loading: teamLoading } = useTeam(currentUser?.teamId);
+
+    const completedClueIds = team?.completedClues || [];
+    const totalCount = clues.length;
+    const completedCount = completedClueIds.length;
+
+    // Find current clue (first incomplete clue)
+    const currentClue = clues.find(clue => !completedClueIds.includes(clue.id));
+    const currentClueIndex = currentClue ? clues.findIndex(c => c.id === currentClue.id) : -1;
+
+    // Track unread announcements
+    useEffect(() => {
+        const q = query(
+            collection(db, 'announcements'),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (snapshot.empty) {
+                setUnreadCount(0);
+                return;
+            }
+
+            const latestAnnouncement = snapshot.docs[0];
+            const latestTimestamp = latestAnnouncement.data().createdAt?.toMillis() || 0;
+            const lastRead = parseInt(localStorage.getItem('lastReadAnnouncement') || '0');
+
+            if (latestTimestamp > lastRead) {
+                // Count unread announcements
+                const unreadQuery = query(
+                    collection(db, 'announcements'),
+                    orderBy('createdAt', 'desc')
+                );
+
+                onSnapshot(unreadQuery, (allSnapshot) => {
+                    const unread = allSnapshot.docs.filter(doc => {
+                        const timestamp = doc.data().createdAt?.toMillis() || 0;
+                        return timestamp > lastRead;
+                    });
+                    setUnreadCount(unread.length);
+                });
+            } else {
+                setUnreadCount(0);
+            }
+        });
+
+        return unsubscribe;
+    }, []);
+
+    // Mark announcements as read when viewing
+    useEffect(() => {
+        if (activeTab === 'announcements') {
+            localStorage.setItem('lastReadAnnouncement', Date.now().toString());
+            setUnreadCount(0);
+        }
+    }, [activeTab]);
 
     const handleSignOut = async () => {
         await signOut();
         navigate('/');
     };
 
-    // Find current clue (first incomplete clue)
-    const currentClue = clues.find((clue: Clue) =>
-        !team?.completedClues?.includes(clue.id)
-    );
-
-    const completedCount = team?.completedClues?.length || 0;
-    const totalCount = clues.length;
-
-    if (teamLoading || cluesLoading) {
+    if (cluesLoading || teamLoading) {
         return (
-            <div className="min-h-screen bg-treasure-50 flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <Map className="w-16 h-16 mb-4 animate-bounce" />
-                    <p className="text-treasure-700 text-lg">Loading your adventure...</p>
+                    <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 pb-20">
             {/* Header */}
             <header className="bg-gradient-primary text-white p-4 sticky top-0 z-10 shadow-glow-primary">
                 <div className="flex items-center justify-between">
@@ -65,28 +116,24 @@ export default function PlayerDashboard() {
             </header>
 
             {/* Main Content */}
-            <main className="pb-20">
-                {activeTab === 'clue' && (
-                    <div className="p-4">
-                        {currentClue ? (
-                            <ClueDisplay
-                                clue={currentClue}
-                                clueIndex={clues.indexOf(currentClue)}
-                                totalClues={totalCount}
-                                completedClues={completedCount}
-                            />
-                        ) : (
-                            <div className="card text-center py-12">
-                                <PartyPopper className="w-16 h-16 mb-4" />
-                                <h2 className="text-2xl font-adventure text-treasure-700 mb-2">
-                                    All Clues Completed!
-                                </h2>
-                                <p className="text-gray-600">
-                                    Congratulations! You've solved all the clues!
-                                </p>
-                            </div>
-                        )}
-                    </div>
+            <main className="p-4">
+                {activeTab === 'clues' && (
+                    currentClue ? (
+                        <ClueDisplay
+                            clue={currentClue}
+                            clueIndex={currentClueIndex}
+                            totalClues={totalCount}
+                            completedClues={completedCount}
+                        />
+                    ) : (
+                        <div className="card text-center py-12">
+                            <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">All Clues Completed!</h2>
+                            <p className="text-gray-600">
+                                Congratulations! You've solved all the clues! 🎉
+                            </p>
+                        </div>
+                    )
                 )}
 
                 {activeTab === 'leaderboard' && (
@@ -99,7 +146,11 @@ export default function PlayerDashboard() {
             </main>
 
             {/* Bottom Navigation */}
-            <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+            <BottomNav
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                unreadAnnouncementsCount={unreadCount}
+            />
         </div>
     );
 }

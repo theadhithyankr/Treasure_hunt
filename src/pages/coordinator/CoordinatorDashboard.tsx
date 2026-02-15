@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Users, FileText, Check, Megaphone } from 'lucide-react';
 import TeamManagement from '../../components/coordinator/TeamManagement';
 import ClueManagement from '../../components/coordinator/ClueManagement';
 import SubmissionQueue from '../../components/coordinator/SubmissionQueue';
@@ -27,19 +27,19 @@ export default function CoordinatorDashboard() {
     const pendingSubmissions = submissions.filter(s => s.status === 'pending');
 
     return (
-        <div className="min-h-screen bg-treasure-50">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">
             {/* Header */}
-            <header className="bg-treasure-500 text-white p-4 safe-area-top sticky top-0 z-10 shadow-lg">
+            <header className="bg-gradient-primary text-white p-4 safe-area-top sticky top-0 z-10 shadow-glow-primary">
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
                         <h1 className="text-xl font-bold">🧭 Coordinator Dashboard</h1>
-                        <p className="text-sm text-treasure-100">
+                        <p className="text-sm text-white/90">
                             {teams.length} teams • {clues.length} clues
                         </p>
                     </div>
                     <button
                         onClick={handleSignOut}
-                        className="px-3 py-2 bg-treasure-600 rounded-lg text-sm hover:bg-treasure-700 active:bg-treasure-800"
+                        className="px-4 py-2 bg-white/20 backdrop-blur-sm rounded-xl text-sm font-semibold hover:bg-white/30 active:bg-white/40 transition-all"
                     >
                         Sign Out
                     </button>
@@ -66,39 +66,39 @@ export default function CoordinatorDashboard() {
             </main>
 
             {/* Bottom Navigation */}
-            <nav className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-treasure-500 safe-area-bottom shadow-lg z-20">
+            <nav className="fixed bottom-0 left-0 right-0 glass border-t border-primary-200 safe-area-bottom shadow-glass z-20">
                 <div className="flex justify-around py-2">
                     <button
                         onClick={() => setActiveTab('teams')}
-                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors ${activeTab === 'teams'
-                                ? 'bg-treasure-100 text-treasure-700'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            } `}
+                        className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'teams'
+                                ? 'bg-gradient-primary text-white shadow-glow-primary'
+                                : 'text-gray-600 hover:bg-primary-50'
+                            }`}
                     >
-                        <span className="text-2xl">👥</span>
+                        <Users className="w-6 h-6" />
                         <span className="text-xs mt-1 font-semibold">Teams</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('clues')}
-                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors ${activeTab === 'clues'
-                                ? 'bg-treasure-100 text-treasure-700'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            } `}
+                        className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'clues'
+                                ? 'bg-gradient-primary text-white shadow-glow-primary'
+                                : 'text-gray-600 hover:bg-primary-50'
+                            }`}
                     >
-                        <span className="text-2xl">📝</span>
+                        <FileText className="w-6 h-6" />
                         <span className="text-xs mt-1 font-semibold">Clues</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('submissions')}
-                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors relative ${activeTab === 'submissions'
-                                ? 'bg-treasure-100 text-treasure-700'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            } `}
+                        className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all relative ${activeTab === 'submissions'
+                                ? 'bg-gradient-primary text-white shadow-glow-primary'
+                                : 'text-gray-600 hover:bg-primary-50'
+                            }`}
                     >
                         {pendingSubmissions.length > 0 && (
-                            <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
                                 {pendingSubmissions.length}
                             </span>
                         )}
@@ -108,12 +108,12 @@ export default function CoordinatorDashboard() {
 
                     <button
                         onClick={() => setActiveTab('broadcast')}
-                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors ${activeTab === 'broadcast'
-                                ? 'bg-treasure-100 text-treasure-700'
-                                : 'text-gray-600 hover:bg-gray-100'
-                            } `}
+                        className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'broadcast'
+                                ? 'bg-gradient-primary text-white shadow-glow-primary'
+                                : 'text-gray-600 hover:bg-primary-50'
+                            }`}
                     >
-                        <span className="text-2xl">📢</span>
+                        <Megaphone className="w-6 h-6" />
                         <span className="text-xs mt-1 font-semibold">News</span>
                     </button>
                 </div>

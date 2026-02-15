@@ -1,9 +1,12 @@
 import { Trophy, Crown, Award } from 'lucide-react';
-import { useTeams } from '../../hooks/useFirestore';
+import { useTeams, useClues } from '../../hooks/useFirestore';
 import type { Team } from '../../types';
 
 export default function Leaderboard() {
     const { teams: leaderboard, loading } = useTeams();
+    const { clues } = useClues();
+
+    const totalClues = clues.length;
 
     if (loading) {
         return (
@@ -28,44 +31,54 @@ export default function Leaderboard() {
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {leaderboard.map((team: Team, index: number) => (
-                        <div
-                            key={team.id}
-                            className={`glass rounded-2xl p-4 flex items-center transition-all hover:shadow-xl ${index === 0
-                                ? 'border-2 border-yellow-400 shadow-glow-accent'
-                                : 'border border-white/30'
-                                }`}
-                        >
-                            {/* Rank badge */}
+                    {leaderboard.map((team: Team, index: number) => {
+                        const completedCount = team.completedClues?.length || 0;
+                        const hasWon = completedCount === totalClues && totalClues > 0;
+
+                        return (
                             <div
-                                className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${index === 0
-                                    ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg'
-                                    : index === 1
-                                        ? 'bg-gradient-to-br from-gray-300 to-gray-500'
-                                        : index === 2
-                                            ? 'bg-gradient-to-br from-amber-500 to-amber-700'
-                                            : 'bg-gradient-primary'
+                                key={team.id}
+                                className={`glass rounded-2xl p-4 flex items-center transition-all hover:shadow-xl ${index === 0
+                                        ? 'border-2 border-yellow-400 shadow-glow-accent'
+                                        : 'border border-white/30'
                                     }`}
                             >
-                                {index + 1}
-                            </div>
-
-                            {/* Team info */}
-                            <div className="flex-1 ml-4 min-w-0">
-                                <h3 className="font-bold text-lg truncate text-gray-900">{team.name}</h3>
-                                <p className="text-sm text-gray-600">
-                                    {team.completedClues?.length || 0} clues solved
-                                </p>
-                            </div>
-
-                            {/* Crown icon - only for 1st place */}
-                            {index === 0 && (
-                                <div className="ml-2 flex-shrink-0">
-                                    <Crown className="w-7 h-7 text-yellow-500" />
+                                {/* Rank badge */}
+                                <div
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${index === 0
+                                            ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg'
+                                            : index === 1
+                                                ? 'bg-gradient-to-br from-gray-300 to-gray-500'
+                                                : index === 2
+                                                    ? 'bg-gradient-to-br from-amber-500 to-amber-700'
+                                                    : 'bg-gradient-primary'
+                                        }`}
+                                >
+                                    {index + 1}
                                 </div>
-                            )}
-                        </div>
-                    ))}
+
+                                {/* Team info */}
+                                <div className="flex-1 ml-4 min-w-0">
+                                    <h3 className="font-bold text-lg truncate text-gray-900">{team.name}</h3>
+                                    <p className="text-sm text-gray-600">
+                                        {completedCount} clues solved
+                                    </p>
+                                </div>
+
+                                {/* Winner status or Crown icon */}
+                                {hasWon ? (
+                                    <div className="ml-2 flex-shrink-0 flex items-center gap-2 bg-gradient-accent px-3 py-1 rounded-full shadow-glow-accent">
+                                        <Trophy className="w-5 h-5 text-white" />
+                                        <span className="text-white font-bold text-sm">Won!</span>
+                                    </div>
+                                ) : index === 0 && (
+                                    <div className="ml-2 flex-shrink-0">
+                                        <Crown className="w-7 h-7 text-yellow-500" />
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
         </div>

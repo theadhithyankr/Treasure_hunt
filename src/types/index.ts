@@ -31,8 +31,11 @@ export interface Submission {
 
 export interface Announcement {
     id: string;
+    title?: string;
     message: string;
+    priority?: 'normal' | 'high';
     createdAt: Date;
+    editedAt?: Date;
 }
 
 export interface MysteryData {

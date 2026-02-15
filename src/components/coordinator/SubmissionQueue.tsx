@@ -1,8 +1,8 @@
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, arrayUnion, addDoc, collection, serverTimestamp, getDocs, query } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Submission } from '../../types';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
-import { Check, PenTool, Camera, QrCode } from 'lucide-react';
+import { Check, PenTool, Camera, QrCode, Trash2, X } from 'lucide-react';
 import { formatTimestamp } from '../../utils/helpers';
 
 interface SubmissionQueueProps {
@@ -24,6 +24,23 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
             await updateDoc(doc(db, 'teams', submission.teamId), {
                 completedClues: arrayUnion(submission.clueId)
             });
+
+            // Check if team completed all clues
+            const teamDoc = await getDocs(query(collection(db, 'teams')));
+            const team = teamDoc.docs.find(d => d.id === submission.teamId)?.data();
+            const cluesSnapshot = await getDocs(collection(db, 'clues'));
+            const totalClues = cluesSnapshot.size;
+            const completedClues = (team?.completedClues || []).length + 1; // +1 for the one we just approved
+
+            // If team completed all clues, create auto-announcement
+            if (completedClues === totalClues) {
+                await addDoc(collection(db, 'announcements'), {
+                    title: '🎉 Team Completed!',
+                    message: `Congratulations to ${submission.teamName} for completing all ${totalClues} clues! 🏆`,
+                    priority: 'high',
+                    createdAt: serverTimestamp()
+                });
+            }
 
             hapticSuccess();
         } catch (err: any) {
@@ -47,35 +64,48 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
         }
     };
 
+    const handleDelete = async (submission: Submission) => {
+        if (!confirm(`Permanently delete this submission from ${submission.teamName}?`)) return;
+
+        try {
+            await deleteDoc(doc(db, 'submissions', submission.id));
+            hapticSuccess();
+            alert('Submission deleted!');
+        } catch (err: any) {
+            hapticError();
+            alert('Failed to delete: ' + err.message);
+        }
+    };
+
     if (loading) {
         return (
             <div className="p-6 text-center">
-                <Check className="w-10 h-10 mb-2 animate-pulse" />
-                <p className="text-treasure-700">Loading submissions...</p>
+                <Check className="w-10 h-10 mb-2 animate-pulse mx-auto text-primary-500" />
+                <p className="text-gray-700">Loading submissions...</p>
             </div>
         );
     }
 
     return (
         <div className="p-4">
-            <h2 className="text-2xl font-adventure text-treasure-700 mb-4">
+            <h2 className="text-2xl font-bold text-center mb-6 bg-gradient-primary bg-clip-text text-transparent">
                 Submission Queue
             </h2>
 
             {submissions.length === 0 ? (
                 <div className="card text-center py-8">
-                    <Check className="w-12 h-12 mb-3" />
+                    <Check className="w-12 h-12 mb-3 mx-auto text-gray-300" />
                     <p className="text-gray-600">No pending submissions</p>
                 </div>
             ) : (
                 <div className="space-y-3">
                     {submissions.map((submission) => (
-                        <div key={submission.id} className="card">
+                        <div key={submission.id} className="glass rounded-3xl shadow-glass p-4">
                             <div className="mb-3">
                                 <div className="flex items-start justify-between mb-2">
                                     <div>
-                                        <h3 className="font-bold text-lg">{submission.teamName}</h3>
-                                        <p className="text-sm text-treasure-600">{submission.clueTitle}</p>
+                                        <h3 className="font-bold text-lg text-gray-900">{submission.teamName}</h3>
+                                        <p className="text-sm text-primary-600">{submission.clueTitle}</p>
                                     </div>
                                     <span className="text-xs text-gray-500">
                                         {formatTimestamp(submission.submittedAt)}
@@ -91,44 +121,57 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                                     />
                                 ) : (
                                     <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                                        <p className="text-sm font-mono">{submission.content}</p>
+                                        <p className="text-sm font-mono text-gray-800">{submission.content}</p>
                                     </div>
                                 )}
 
-                                <div className="text-xs text-gray-500 mb-3">
+                                <div className="text-xs text-gray-500 mb-3 flex items-center gap-1">
                                     Type: {submission.type === 'text' && (
-                                        <span className="flex items-center gap-1">
+                                        <>
                                             <PenTool className="w-4 h-4" /> Text
-                                        </span>
+                                        </>
                                     )}
                                     {submission.type === 'photo' && (
-                                        <span className="flex items-center gap-1">
+                                        <>
                                             <Camera className="w-4 h-4" /> Photo
-                                        </span>
+                                        </>
                                     )}
                                     {submission.type === 'scan' && (
-                                        <span className="flex items-center gap-1">
+                                        <>
                                             <QrCode className="w-4 h-4" /> Scan
-                                        </span>
+                                        </>
                                     )}
                                 </div>
                             </div>
 
                             {/* Action Buttons */}
                             <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleApprove(submission)}
-                                    className="flex-1 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 active:bg-green-700"
-                                >
-                                    <Check className="w-4 h-4 inline mr-1" />
-                                    Approve
-                                </button>
-                                <button
-                                    onClick={() => handleReject(submission)}
-                                    className="flex-1 py-3 bg-red-500 text-white rounded-lg font-bold hover:bg-red-600 active:bg-red-700"
-                                >
-                                    ✕ Reject
-                                </button>
+                                {submission.status === 'pending' ? (
+                                    <>
+                                        <button
+                                            onClick={() => handleApprove(submission)}
+                                            className="flex-1 py-3 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            Approve
+                                        </button>
+                                        <button
+                                            onClick={() => handleReject(submission)}
+                                            className="flex-1 py-3 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                                        >
+                                            <X className="w-4 h-4" />
+                                            Reject
+                                        </button>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={() => handleDelete(submission)}
+                                        className="w-full py-3 bg-gradient-to-br from-gray-500 to-gray-600 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete
+                                    </button>
+                                )}
                             </div>
                         </div>
                     ))}
