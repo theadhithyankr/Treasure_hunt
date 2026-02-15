@@ -1,4 +1,4 @@
-
+import { Unlock } from 'lucide-react';
 import type { Clue } from '../../types';
 import SubmissionForm from './SubmissionForm';
 
@@ -14,17 +14,17 @@ export default function ClueDisplay({ clue, clueIndex, totalClues, completedClue
         <div className="space-y-4">
             {/* Progress indicator */}
             <div className="flex items-center justify-between px-2">
-                <span className="text-sm font-semibold text-treasure-700">
+                <span className="text-sm font-semibold text-gray-700">
                     Clue #{clueIndex + 1}
                 </span>
-                <span className="text-xs text-gray-600">
-                    🔓 {completedClues}/{totalClues}
+                <span className="text-xs text-gray-600 flex items-center gap-1">
+                    <Unlock className="w-3 h-3" /> {completedClues}/{totalClues}
                 </span>
             </div>
 
             {/* Clue card */}
             <div className="clue-card">
-                <h2 className="text-2xl font-adventure text-treasure-700 mb-4">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
                     {clue.title}
                 </h2>
 
@@ -40,28 +40,6 @@ export default function ClueDisplay({ clue, clueIndex, totalClues, completedClue
                         loading="lazy"
                     />
                 )}
-
-                {/* Type indicator */}
-                <div className="flex items-center gap-2 text-sm text-treasure-600 mb-4">
-                    {clue.type === 'text' && (
-                        <>
-                            <span className="text-xl">✍️</span>
-                            <span>Type your answer</span>
-                        </>
-                    )}
-                    {clue.type === 'photo' && (
-                        <>
-                            <span className="text-xl">📸</span>
-                            <span>Take a photo</span>
-                        </>
-                    )}
-                    {clue.type === 'scan' && (
-                        <>
-                            <span className="text-xl">📷</span>
-                            <span>Scan QR/Barcode</span>
-                        </>
-                    )}
-                </div>
             </div>
 
             {/* Submission form */}

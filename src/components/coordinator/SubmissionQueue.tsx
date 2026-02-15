@@ -2,6 +2,7 @@ import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Submission } from '../../types';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
+import { Check, PenTool, Camera, QrCode } from 'lucide-react';
 import { formatTimestamp } from '../../utils/helpers';
 
 interface SubmissionQueueProps {
@@ -49,7 +50,7 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
     if (loading) {
         return (
             <div className="p-6 text-center">
-                <div className="text-4xl mb-2 animate-pulse">✓</div>
+                <Check className="w-10 h-10 mb-2 animate-pulse" />
                 <p className="text-treasure-700">Loading submissions...</p>
             </div>
         );
@@ -63,7 +64,7 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
 
             {submissions.length === 0 ? (
                 <div className="card text-center py-8">
-                    <div className="text-5xl mb-3">✓</div>
+                    <Check className="w-12 h-12 mb-3" />
                     <p className="text-gray-600">No pending submissions</p>
                 </div>
             ) : (
@@ -95,9 +96,21 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                                 )}
 
                                 <div className="text-xs text-gray-500 mb-3">
-                                    Type: {submission.type === 'text' && '✍️ Text'}
-                                    {submission.type === 'photo' && '📸 Photo'}
-                                    {submission.type === 'scan' && '📷 Scan'}
+                                    Type: {submission.type === 'text' && (
+                                        <span className="flex items-center gap-1">
+                                            <PenTool className="w-4 h-4" /> Text
+                                        </span>
+                                    )}
+                                    {submission.type === 'photo' && (
+                                        <span className="flex items-center gap-1">
+                                            <Camera className="w-4 h-4" /> Photo
+                                        </span>
+                                    )}
+                                    {submission.type === 'scan' && (
+                                        <span className="flex items-center gap-1">
+                                            <QrCode className="w-4 h-4" /> Scan
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -107,7 +120,8 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                                     onClick={() => handleApprove(submission)}
                                     className="flex-1 py-3 bg-green-500 text-white rounded-lg font-bold hover:bg-green-600 active:bg-green-700"
                                 >
-                                    ✓ Approve
+                                    <Check className="w-4 h-4 inline mr-1" />
+                                    Approve
                                 </button>
                                 <button
                                     onClick={() => handleReject(submission)}

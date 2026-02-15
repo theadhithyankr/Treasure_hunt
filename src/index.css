@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Pirata+One&family=Creepster&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Pirata+One&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply font-sans bg-treasure-50 text-gray-900 antialiased;
+    @apply font-sans bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50 text-gray-900 antialiased;
     min-height: 100vh;
     min-height: -webkit-fill-available;
   }
@@ -30,35 +30,72 @@
 }
 
 @layer components {
+
+  /* Modern Gradient Buttons */
   .btn-primary {
-    @apply w-full py-4 px-6 bg-gradient-to-r from-treasure-500 to-ocean-500 text-white font-bold text-lg rounded-xl shadow-lg hover:from-treasure-600 hover:to-ocean-600 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full py-4 px-6 bg-gradient-primary text-white font-semibold text-lg rounded-2xl shadow-glow-primary hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
     min-height: 44px;
   }
 
   .btn-secondary {
-    @apply w-full py-4 px-6 bg-white text-treasure-700 font-bold text-lg rounded-xl shadow-lg border-2 border-treasure-400 hover:bg-treasure-50 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full py-4 px-6 glass text-primary-700 font-semibold text-lg rounded-2xl shadow-glass hover:bg-white/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed;
+    min-height: 44px;
+  }
+
+  .btn-success {
+    @apply w-full py-4 px-6 bg-gradient-success text-white font-semibold text-lg rounded-2xl shadow-glow-success hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed;
     min-height: 44px;
   }
 
   .btn-danger {
-    @apply w-full py-4 px-6 bg-gradient-to-r from-red-600 to-red-700 text-white font-bold text-lg rounded-xl shadow-lg hover:from-red-700 hover:to-red-800 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full py-4 px-6 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold text-lg rounded-2xl shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-50 disabled:cursor-not-allowed;
     min-height: 44px;
   }
 
+  /* Glass Cards */
   .card {
-    @apply bg-white rounded-2xl shadow-xl p-6 border border-treasure-100;
+    @apply glass rounded-3xl shadow-glass p-6 hover:shadow-xl transition-all duration-300;
   }
 
+  .card-solid {
+    @apply bg-white rounded-3xl shadow-card p-6 hover:shadow-xl transition-all duration-300;
+  }
+
+  /* Modern Input Fields */
   .input-field {
-    @apply w-full p-4 text-lg border-2 border-treasure-200 rounded-xl focus:border-treasure-500 focus:ring-4 focus:ring-treasure-100 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed transition-all;
+    @apply w-full p-4 text-lg bg-white/80 backdrop-blur-sm border-2 border-purple-200 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:bg-white outline-none placeholder:text-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200;
     min-height: 44px;
   }
 
+  /* Clue Cards with Gradient Border */
   .clue-card {
-    @apply bg-gradient-to-br from-white to-treasure-50 rounded-2xl shadow-2xl p-6 border-2 border-treasure-300;
+    @apply relative glass rounded-3xl shadow-glass p-6 before:absolute before:inset-0 before:rounded-3xl before:p-[2px] before:bg-gradient-primary before:-z-10 hover:shadow-xl transition-all duration-300;
   }
 
-  .mystery-card {
-    @apply bg-gradient-to-br from-purple-900 to-indigo-900 rounded-2xl shadow-2xl p-6 border-2 border-purple-600 text-white;
+  /* Premium Badge */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-gradient-primary text-white shadow-glow-primary;
+  }
+
+  /* Floating Action Button */
+  .fab {
+    @apply fixed bottom-20 right-6 w-14 h-14 bg-gradient-primary text-white rounded-full shadow-glow-primary flex items-center justify-center hover:scale-110 active:scale-95 transition-all duration-300 ease-out z-30;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply w-full h-2 bg-gray-200 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full bg-gradient-primary rounded-full transition-all duration-500 ease-out;
+  }
+
+  /* Shimmer Loading Effect */
+  .shimmer {
+    @apply relative overflow-hidden;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
   }
 }

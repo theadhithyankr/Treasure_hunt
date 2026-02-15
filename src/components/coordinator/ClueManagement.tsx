@@ -4,6 +4,7 @@ import { db } from '../../config/firebase';
 import type { Clue } from '../../types';
 import { compressImage } from '../../utils/imageCompression';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
+import { Camera, PenTool, QrCode, Image as ImageIcon, Trash2 } from 'lucide-react';
 
 interface ClueManagementProps {
     clues: Clue[];
@@ -220,8 +221,8 @@ export default function ClueManagement({ clues, loading }: ClueManagementProps) 
                                 className="w-full py-4 border-2 border-dashed border-treasure-400 rounded-lg hover:border-treasure-500 hover:bg-treasure-50"
                                 disabled={creating}
                             >
-                                <span className="text-3xl block mb-1">📸</span>
-                                <span className="text-sm text-treasure-700">Upload Image</span>
+                                <Camera className="w-8 h-8 mb-1" />
+                                <span className="text-sm">Upload Image</span>
                             </button>
                         )}
                     </div>
@@ -261,11 +262,27 @@ export default function ClueManagement({ clues, loading }: ClueManagementProps) 
                                     <p className="text-sm text-gray-600 mt-1 line-clamp-2">{clue.content}</p>
                                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
                                         <span className="bg-treasure-100 text-treasure-700 px-2 py-1 rounded">
-                                            {clue.type === 'text' && '✍️ Text'}
-                                            {clue.type === 'photo' && '📸 Photo'}
-                                            {clue.type === 'scan' && '📷 Scan'}
+                                            {clue.type === 'text' && (
+                                                <span className="flex items-center gap-1">
+                                                    <PenTool className="w-4 h-4" /> Text
+                                                </span>
+                                            )}
+                                            {clue.type === 'photo' && (
+                                                <span className="flex items-center gap-1">
+                                                    <Camera className="w-4 h-4" /> Photo
+                                                </span>
+                                            )}
+                                            {clue.type === 'scan' && (
+                                                <span className="flex items-center gap-1">
+                                                    <QrCode className="w-4 h-4" /> Scan
+                                                </span>
+                                            )}
                                         </span>
-                                        {clue.imageUrl && <span>🖼️ Has image</span>}
+                                        {clue.imageUrl && (
+                                            <span className="flex items-center gap-1">
+                                                <ImageIcon className="w-4 h-4" /> Has image
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                                 <button
@@ -273,7 +290,7 @@ export default function ClueManagement({ clues, loading }: ClueManagementProps) 
                                     className="text-red-500 hover:text-red-700 text-xl p-2"
                                     title="Delete clue"
                                 >
-                                    🗑️
+                                    <Trash2 className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>

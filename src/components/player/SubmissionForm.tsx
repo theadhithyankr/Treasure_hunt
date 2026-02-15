@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import type { Clue } from '../../types';
 import { compressImage } from '../../utils/imageCompression';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
+import { QrCode, Camera, Check } from 'lucide-react';
 import CameraScanner from './CameraScanner';
 
 interface SubmissionFormProps {
@@ -57,15 +58,20 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
 
         try {
             let submissionContent = textAnswer;
+            let submissionType = 'text';
 
-            // Handle photo submission - convert to base64
-            if (clue.type === 'photo' && selectedFile) {
+            // Determine what type of submission this is
+            if (selectedFile) {
+                submissionType = 'photo';
                 const reader = new FileReader();
                 submissionContent = await new Promise((resolve, reject) => {
                     reader.onloadend = () => resolve(reader.result as string);
                     reader.onerror = reject;
                     reader.readAsDataURL(selectedFile);
                 });
+            } else if (textAnswer.trim()) {
+                // Check if it looks like a scanned code (could be QR/barcode)
+                submissionType = textAnswer.length < 50 ? 'scan' : 'text';
             }
 
             // Create submission
@@ -74,7 +80,8 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                 teamName: currentUser.teamName,
                 clueId: clue.id,
                 clueTitle: clue.title,
-                type: clue.type,
+                type: submissionType,
+                expectedType: clue.type, // Store expected type for validation
                 content: submissionContent,
                 status: 'pending',
                 submittedAt: serverTimestamp()
@@ -96,93 +103,91 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
     };
 
     const canSubmit = () => {
-        if (clue.type === 'text' || clue.type === 'scan') {
-            return textAnswer.trim().length > 0;
-        }
-        if (clue.type === 'photo') {
-            return selectedFile !== null;
-        }
-        return false;
+        return textAnswer.trim().length > 0 || selectedFile !== null;
     };
 
     return (
         <>
-            <form onSubmit={handleSubmit} className="card space-y-4">
-                <h3 className="text-lg font-bold text-treasure-700">Submit Your Answer</h3>
+            <form onSubmit={handleSubmit} className="glass rounded-3xl shadow-glass p-6 space-y-4">
+                <h3 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+                    Submit Your Answer
+                </h3>
 
-                {/* Text Input */}
-                {(clue.type === 'text' || clue.type === 'scan') && (
-                    <div>
-                        <textarea
-                            value={textAnswer}
-                            onChange={(e) => setTextAnswer(e.target.value)}
-                            placeholder="Enter your answer..."
-                            className="input-field"
-                            rows={3}
-                            disabled={submitting}
-                        />
-                    </div>
-                )}
+                {/* Text Input - Always shown */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Text Answer
+                    </label>
+                    <textarea
+                        value={textAnswer}
+                        onChange={(e) => setTextAnswer(e.target.value)}
+                        placeholder="Enter your answer..."
+                        className="input-field"
+                        rows={3}
+                        disabled={submitting}
+                    />
+                </div>
 
-                {/* QR/Barcode Scanner Button */}
-                {clue.type === 'scan' && (
+                {/* Action Buttons Row */}
+                <div className="grid grid-cols-2 gap-3">
+                    {/* QR/Barcode Scanner Button - Always shown */}
                     <button
                         type="button"
                         onClick={() => setShowScanner(true)}
-                        className="w-full py-6 bg-treasure-500 text-white rounded-lg shadow-lg hover:bg-treasure-600 active:bg-treasure-700 transition-colors"
+                        className="flex flex-col items-center justify-center py-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all"
                         disabled={submitting}
                     >
-                        <span className="text-4xl block mb-2">📷</span>
-                        <span className="text-lg font-bold">Scan QR/Barcode</span>
+                        <QrCode className="w-8 h-8 mb-1" />
+                        <span className="text-sm font-semibold">Scan Code</span>
                     </button>
-                )}
 
-                {/* Photo Upload */}
-                {clue.type === 'photo' && (
-                    <div>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handleFileSelect}
-                            className="hidden"
+                    {/* Photo Upload Button - Always shown */}
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center justify-center py-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all"
+                        disabled={submitting}
+                    >
+                        <Camera className="w-8 h-8 mb-1" />
+                        <span className="text-sm font-semibold">Take Photo</span>
+                    </button>
+                </div>
+
+                {/* Hidden file input */}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                />
+
+                {/* Photo Preview */}
+                {previewUrl && (
+                    <div className="space-y-2">
+                        <p className="text-sm font-semibold text-gray-700">Photo Preview:</p>
+                        <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="w-full rounded-lg shadow-md"
                         />
-
-                        {previewUrl ? (
-                            <div className="space-y-3">
-                                <img
-                                    src={previewUrl}
-                                    alt="Preview"
-                                    className="w-full rounded-lg shadow-md"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold"
-                                    disabled={submitting}
-                                >
-                                    📸 Take Another Photo
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full py-8 border-4 border-dashed border-treasure-400 rounded-lg hover:border-treasure-500 hover:bg-treasure-50 active:bg-treasure-100 transition-colors"
-                                disabled={submitting}
-                            >
-                                <span className="text-5xl block mb-2">📸</span>
-                                <p className="text-lg font-semibold text-treasure-700">
-                                    Take or Upload Photo
-                                </p>
-                            </button>
-                        )}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedFile(null);
+                                setPreviewUrl(null);
+                            }}
+                            className="w-full py-2 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-300 transition-colors"
+                            disabled={submitting}
+                        >
+                            Remove Photo
+                        </button>
                     </div>
                 )}
 
                 {error && (
-                    <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
                         {error}
                     </div>
                 )}
@@ -192,7 +197,11 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                     className="btn-primary"
                     disabled={!canSubmit() || submitting}
                 >
-                    {submitting ? 'Submitting...' : '✓ Submit Answer'}
+                    {submitting ? 'Submitting...' : (
+                        <span className="flex items-center justify-center gap-2">
+                            <Check className="w-5 h-5" /> Submit Answer
+                        </span>
+                    )}
                 </button>
             </form>
 

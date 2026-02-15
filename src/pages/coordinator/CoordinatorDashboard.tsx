@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTeams, useClues, useSubmissions } from '../../hooks/useFirestore';
+import { useNavigate } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import TeamManagement from '../../components/coordinator/TeamManagement';
 import ClueManagement from '../../components/coordinator/ClueManagement';
 import SubmissionQueue from '../../components/coordinator/SubmissionQueue';
 import BroadcastPanel from '../../components/coordinator/BroadcastPanel';
-import { useNavigate } from 'react-router-dom';
+import { useTeams, useClues, useSubmissions } from '../../hooks/useFirestore';
 
 type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast';
 
@@ -69,10 +70,10 @@ export default function CoordinatorDashboard() {
                 <div className="flex justify-around py-2">
                     <button
                         onClick={() => setActiveTab('teams')}
-                        className={`flex flex-col items-center p-2 min-w-[60px] rounded-lg transition-colors ${activeTab === 'teams'
-                            ? 'bg-treasure-100 text-treasure-700'
-                            : 'text-gray-600 hover:bg-gray-100'
-                            }`}
+                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors ${activeTab === 'teams'
+                                ? 'bg-treasure-100 text-treasure-700'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            } `}
                     >
                         <span className="text-2xl">👥</span>
                         <span className="text-xs mt-1 font-semibold">Teams</span>
@@ -80,10 +81,10 @@ export default function CoordinatorDashboard() {
 
                     <button
                         onClick={() => setActiveTab('clues')}
-                        className={`flex flex-col items-center p-2 min-w-[60px] rounded-lg transition-colors ${activeTab === 'clues'
-                            ? 'bg-treasure-100 text-treasure-700'
-                            : 'text-gray-600 hover:bg-gray-100'
-                            }`}
+                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors ${activeTab === 'clues'
+                                ? 'bg-treasure-100 text-treasure-700'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            } `}
                     >
                         <span className="text-2xl">📝</span>
                         <span className="text-xs mt-1 font-semibold">Clues</span>
@@ -91,26 +92,26 @@ export default function CoordinatorDashboard() {
 
                     <button
                         onClick={() => setActiveTab('submissions')}
-                        className={`flex flex-col items-center p-2 min-w-[60px] rounded-lg transition-colors relative ${activeTab === 'submissions'
-                            ? 'bg-treasure-100 text-treasure-700'
-                            : 'text-gray-600 hover:bg-gray-100'
-                            }`}
+                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors relative ${activeTab === 'submissions'
+                                ? 'bg-treasure-100 text-treasure-700'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            } `}
                     >
                         {pendingSubmissions.length > 0 && (
                             <span className="absolute top-1 right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                                 {pendingSubmissions.length}
                             </span>
                         )}
-                        <span className="text-2xl">✓</span>
+                        <Check className="w-6 h-6" />
                         <span className="text-xs mt-1 font-semibold">Queue</span>
                     </button>
 
                     <button
                         onClick={() => setActiveTab('broadcast')}
-                        className={`flex flex-col items-center p-2 min-w-[60px] rounded-lg transition-colors ${activeTab === 'broadcast'
-                            ? 'bg-treasure-100 text-treasure-700'
-                            : 'text-gray-600 hover:bg-gray-100'
-                            }`}
+                        className={`flex flex - col items - center p - 2 min - w - [60px] rounded - lg transition - colors ${activeTab === 'broadcast'
+                                ? 'bg-treasure-100 text-treasure-700'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            } `}
                     >
                         <span className="text-2xl">📢</span>
                         <span className="text-xs mt-1 font-semibold">News</span>

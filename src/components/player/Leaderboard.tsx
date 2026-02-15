@@ -1,26 +1,29 @@
-import { useLeaderboard } from '../../hooks/useFirestore';
+import { Trophy, Crown, Award } from 'lucide-react';
+import { useTeams } from '../../hooks/useFirestore';
 import type { Team } from '../../types';
 
 export default function Leaderboard() {
-    const { leaderboard, loading } = useLeaderboard();
+    const { teams: leaderboard, loading } = useTeams();
 
     if (loading) {
         return (
             <div className="p-6 text-center">
-                <div className="text-4xl mb-2 animate-pulse">🏆</div>
-                <p className="text-treasure-700">Loading rankings...</p>
+                <Trophy className="w-10 h-10 mb-2 animate-pulse mx-auto text-primary-500" />
+                <p className="text-gray-700">Loading rankings...</p>
             </div>
         );
     }
 
     return (
         <div className="px-4 py-6">
-            <h2 className="text-2xl font-adventure text-treasure-700 mb-4 text-center">
-                🏆 Leaderboard
+            <h2 className="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
+                <Trophy className="w-6 h-6 text-primary-500" />
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Leaderboard</span>
             </h2>
 
             {leaderboard.length === 0 ? (
                 <div className="card text-center py-8">
+                    <Award className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p className="text-gray-600">No teams yet!</p>
                 </div>
             ) : (
@@ -28,18 +31,20 @@ export default function Leaderboard() {
                     {leaderboard.map((team: Team, index: number) => (
                         <div
                             key={team.id}
-                            className={`bg-white rounded-lg p-4 shadow-lg flex items-center ${index === 0 ? 'border-4 border-yellow-400' : 'border-2 border-treasure-200'
+                            className={`glass rounded-2xl p-4 flex items-center transition-all hover:shadow-xl ${index === 0
+                                ? 'border-2 border-yellow-400 shadow-glow-accent'
+                                : 'border border-white/30'
                                 }`}
                         >
                             {/* Rank badge */}
                             <div
                                 className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${index === 0
-                                    ? 'bg-yellow-500'
+                                    ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-lg'
                                     : index === 1
-                                        ? 'bg-gray-400'
+                                        ? 'bg-gradient-to-br from-gray-300 to-gray-500'
                                         : index === 2
-                                            ? 'bg-amber-600'
-                                            : 'bg-treasure-500'
+                                            ? 'bg-gradient-to-br from-amber-500 to-amber-700'
+                                            : 'bg-gradient-primary'
                                     }`}
                             >
                                 {index + 1}
@@ -47,16 +52,18 @@ export default function Leaderboard() {
 
                             {/* Team info */}
                             <div className="flex-1 ml-4 min-w-0">
-                                <h3 className="font-bold text-lg truncate">{team.name}</h3>
+                                <h3 className="font-bold text-lg truncate text-gray-900">{team.name}</h3>
                                 <p className="text-sm text-gray-600">
                                     {team.completedClues?.length || 0} clues solved
                                 </p>
                             </div>
 
-                            {/* Trophy for leader */}
-                            {index === 0 && <span className="text-3xl ml-2">👑</span>}
-                            {index === 1 && <span className="text-3xl ml-2">🥈</span>}
-                            {index === 2 && <span className="text-3xl ml-2">🥉</span>}
+                            {/* Crown icon - only for 1st place */}
+                            {index === 0 && (
+                                <div className="ml-2 flex-shrink-0">
+                                    <Crown className="w-7 h-7 text-yellow-500" />
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

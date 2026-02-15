@@ -4,6 +4,7 @@ import { db } from '../../config/firebase';
 import type { Team } from '../../types';
 import { generateTeamCode } from '../../utils/helpers';
 import { hapticSuccess } from '../../utils/haptics';
+import { Trophy, Backpack } from 'lucide-react';
 
 interface TeamManagementProps {
     teams: Team[];
@@ -34,7 +35,7 @@ export default function TeamManagement({ teams, loading }: TeamManagementProps) 
             hapticSuccess();
             setTeamName('');
             setShowForm(false);
-            alert(`Team created! Code: ${teamCode}`);
+            alert(`Team created! Code: ${teamCode} `);
         } catch (err: any) {
             setError(err.message || 'Failed to create team');
         } finally {
@@ -115,7 +116,11 @@ export default function TeamManagement({ teams, loading }: TeamManagementProps) 
                                     </p>
                                 </div>
                                 <div className="ml-3 text-3xl">
-                                    {(team.completedClues?.length || 0) > 0 ? '🏆' : '🎒'}
+                                    {(team.completedClues?.length || 0) > 0 ? (
+                                        <Trophy className="w-5 h-5" />
+                                    ) : (
+                                        <Backpack className="w-5 h-5" />
+                                    )}
                                 </div>
                             </div>
                         </div>
