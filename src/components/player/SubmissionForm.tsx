@@ -20,6 +20,7 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
     const [showScanner, setShowScanner] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
+    const [isScanned, setIsScanned] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,6 +46,7 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
 
     const handleScanComplete = (scannedValue: string) => {
         setTextAnswer(scannedValue);
+        setIsScanned(true);
         setShowScanner(false);
         hapticSuccess();
     };
@@ -70,8 +72,8 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                     reader.readAsDataURL(selectedFile);
                 });
             } else if (textAnswer.trim()) {
-                // Check if it looks like a scanned code (could be QR/barcode)
-                submissionType = textAnswer.length < 50 ? 'scan' : 'text';
+                // Check if it was scanned
+                submissionType = isScanned ? 'scan' : 'text';
             }
 
             // Create submission
@@ -120,7 +122,10 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                     </label>
                     <textarea
                         value={textAnswer}
-                        onChange={(e) => setTextAnswer(e.target.value)}
+                        onChange={(e) => {
+                            setTextAnswer(e.target.value);
+                            setIsScanned(false);
+                        }}
                         placeholder="Enter your answer..."
                         className="input-field"
                         rows={3}

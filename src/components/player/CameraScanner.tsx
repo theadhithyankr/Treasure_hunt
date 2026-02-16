@@ -36,8 +36,12 @@ export default function CameraScanner({ onScanComplete, onClose }: CameraScanner
 
                 setScanning(true);
             } catch (err: any) {
-                setError('Failed to access camera. Please check permissions.');
                 console.error(err);
+                if (!window.isSecureContext) {
+                    setError('Camera access requires HTTPS. Please use "Take Photo" instead or run on localhost.');
+                } else {
+                    setError('Failed to access camera. Please check permissions or try "Take Photo".');
+                }
             }
         };
 

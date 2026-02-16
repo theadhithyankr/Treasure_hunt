@@ -9,6 +9,12 @@
     @apply font-sans antialiased bg-gradient-to-br from-blue-50 via-white to-orange-50;
     min-height: 100vh;
   }
+
+  input,
+  textarea,
+  select {
+    @apply text-gray-900;
+  }
 }
 
 @layer components {
@@ -45,7 +51,7 @@
 
   /* Input Fields */
   .input-field {
-    @apply w-full p-4 text-lg bg-white border-2 border-blue-200 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:bg-white outline-none placeholder:text-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200;
+    @apply w-full p-4 text-lg bg-white text-gray-900 border-2 border-blue-200 rounded-2xl focus:border-primary-500 focus:ring-4 focus:ring-primary-100 focus:bg-white outline-none placeholder:text-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed transition-all duration-200;
     min-height: 44px;
   }
 
