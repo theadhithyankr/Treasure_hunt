@@ -35,10 +35,12 @@ export default function PlayerDashboard() {
     const { accusation } = useTeamAccusation(currentUser?.teamId || '');
 
     // Check if mystery is unlocked for this team
-    const isMysteryUnlocked = mystery?.active && (
-        !mystery.startClueId ||
-        completedClueIds.includes(mystery.startClueId)
-    );
+    // It must be active, they must have found the start clue, AND they shouldn't have solved it yet
+    const isMysterySolved = accusation?.correct === true;
+
+    const isMysteryUnlocked = mystery?.active &&
+        (!mystery.startClueId || completedClueIds.includes(mystery.startClueId)) &&
+        !isMysterySolved;
 
     // Check if mystery is "in progress" (unlocked but not yet accused/revealed)
     const isMysteryInProgress = isMysteryUnlocked && !accusation && !mystery.revealed;
@@ -135,6 +137,12 @@ export default function PlayerDashboard() {
                                 <>
                                     <Unlock className="w-4 h-4" />
                                     {completedCount}/{totalCount} Clues Solved
+
+                                    {isMysterySolved && (
+                                        <span className="ml-2 px-2 py-0.5 bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded-full text-xs font-bold text-green-100 flex items-center gap-1">
+                                            ✓ Case Solved
+                                        </span>
+                                    )}
                                 </>
                             )}
                             {isMysteryInProgress && (

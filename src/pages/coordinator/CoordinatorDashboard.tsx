@@ -7,6 +7,7 @@ import ClueManagement from '../../components/coordinator/ClueManagement';
 import SubmissionQueue from '../../components/coordinator/SubmissionQueue';
 import BroadcastPanel from '../../components/coordinator/BroadcastPanel';
 import MysteryManagement from '../../components/coordinator/MysteryManagement';
+import CoordinatorLeaderboard from '../../components/coordinator/CoordinatorLeaderboard';
 import { useTeams, useClues, useSubmissions } from '../../hooks/useFirestore';
 
 type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast' | 'mystery';
@@ -15,6 +16,7 @@ export default function CoordinatorDashboard() {
     const { signOut } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>('teams');
+    const [showTeamManagement, setShowTeamManagement] = useState(false);
 
     const { teams, loading: teamsLoading } = useTeams();
     const { clues, loading: cluesLoading } = useClues();
@@ -50,7 +52,23 @@ export default function CoordinatorDashboard() {
             {/* Main Content */}
             <main className="pb-20">
                 {activeTab === 'teams' && (
-                    <TeamManagement teams={teams} loading={teamsLoading} />
+                    !showTeamManagement ? (
+                        <CoordinatorLeaderboard
+                            teams={teams}
+                            clues={clues}
+                            onManageTeams={() => setShowTeamManagement(true)}
+                        />
+                    ) : (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowTeamManagement(false)}
+                                className="absolute top-4 right-4 z-10 text-sm text-primary-600 font-semibold hover:underline"
+                            >
+                                ← Back to Leaderboard
+                            </button>
+                            <TeamManagement teams={teams} loading={teamsLoading} />
+                        </div>
+                    )
                 )}
 
                 {activeTab === 'clues' && (
