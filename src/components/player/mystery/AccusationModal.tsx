@@ -15,6 +15,8 @@ interface AccusationModalProps {
 export default function AccusationModal({ suspect, teamId, teamName, onClose }: AccusationModalProps) {
     const [useCustomSuspect, setUseCustomSuspect] = useState(false);
     const [customSuspectName, setCustomSuspectName] = useState('');
+    const [reasoning, setReasoning] = useState('');
+    const [submitting, setSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
