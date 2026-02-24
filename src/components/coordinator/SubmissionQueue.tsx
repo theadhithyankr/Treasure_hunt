@@ -1,6 +1,7 @@
 import { doc, updateDoc, deleteDoc, arrayUnion, addDoc, collection, serverTimestamp, getDocs, query } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Submission } from '../../types';
+import { deleteFromCloudinary } from '../../utils/cloudinary';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 import { Check, PenTool, Camera, QrCode, Trash2, X } from 'lucide-react';
 import { formatTimestamp } from '../../utils/helpers';
@@ -19,6 +20,11 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
             await updateDoc(doc(db, 'submissions', submission.id), {
                 status: 'approved'
             });
+
+            // Delete submission image from Cloudinary — no longer needed
+            if (submission.type === 'photo' && submission.cloudinaryPublicId) {
+                await deleteFromCloudinary(submission.cloudinaryPublicId);
+            }
 
             // Add clue to team's completed clues
             await updateDoc(doc(db, 'teams', submission.teamId), {
@@ -57,6 +63,11 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                 status: 'rejected'
             });
 
+            // Delete submission image from Cloudinary — no longer needed
+            if (submission.type === 'photo' && submission.cloudinaryPublicId) {
+                await deleteFromCloudinary(submission.cloudinaryPublicId);
+            }
+
             // Push a notification so the player sees a toast in real time
             await addDoc(collection(db, 'notifications'), {
                 teamId: submission.teamId,
@@ -78,6 +89,10 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
         if (!confirm(`Permanently delete this submission from ${submission.teamName}?`)) return;
 
         try {
+            // Delete submission image from Cloudinary if it exists
+            if (submission.type === 'photo' && submission.cloudinaryPublicId) {
+                await deleteFromCloudinary(submission.cloudinaryPublicId);
+            }
             await deleteDoc(doc(db, 'submissions', submission.id));
             hapticSuccess();
             alert('Submission deleted!');

@@ -24,6 +24,7 @@ export interface Submission {
     clueId: string;
     clueTitle: string;
     content: string; // answer or photo URL
+    cloudinaryPublicId?: string; // set only for photo submissions
     type: 'text' | 'photo' | 'scan';
     status: 'pending' | 'approved' | 'rejected';
     submittedAt: Date;

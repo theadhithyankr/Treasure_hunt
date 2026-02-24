@@ -3,6 +3,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from '
 import { db } from '../../config/firebase';
 import type { Clue } from '../../types';
 import { compressImage } from '../../utils/imageCompression';
+import { uploadToCloudinary } from '../../utils/cloudinary';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 import { Camera, PenTool, QrCode, Image as ImageIcon, Trash2, Edit2, FileText } from 'lucide-react';
 
@@ -52,12 +53,8 @@ export default function ClueManagement({ clues, loading }: ClueManagementProps) 
             let imageUrl = '';
 
             if (selectedFile) {
-                const reader = new FileReader();
-                imageUrl = await new Promise((resolve, reject) => {
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(selectedFile);
-                });
+                const result = await uploadToCloudinary(selectedFile);
+                imageUrl = result.url;
             }
 
             await addDoc(collection(db, 'clues'), {
@@ -92,12 +89,8 @@ export default function ClueManagement({ clues, loading }: ClueManagementProps) 
             let imageUrl = editingClue.imageUrl || '';
 
             if (selectedFile) {
-                const reader = new FileReader();
-                imageUrl = await new Promise((resolve, reject) => {
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(selectedFile);
-                });
+                const result = await uploadToCloudinary(selectedFile);
+                imageUrl = result.url;
             }
 
             await updateDoc(doc(db, 'clues', editingClue.id), {

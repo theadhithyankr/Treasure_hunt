@@ -4,6 +4,7 @@ import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Clue } from '../../types';
 import { compressImage } from '../../utils/imageCompression';
+import { uploadToCloudinary } from '../../utils/cloudinary';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 import { QrCode, Camera, Check } from 'lucide-react';
 import CameraScanner from './CameraScanner';
@@ -61,16 +62,14 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
         try {
             let submissionContent = textAnswer;
             let submissionType = 'text';
+            let cloudinaryPublicId: string | undefined;
 
             // Determine what type of submission this is
             if (selectedFile) {
                 submissionType = 'photo';
-                const reader = new FileReader();
-                submissionContent = await new Promise((resolve, reject) => {
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(selectedFile);
-                });
+                const { url, publicId } = await uploadToCloudinary(selectedFile);
+                submissionContent = url;
+                cloudinaryPublicId = publicId;
             } else if (textAnswer.trim()) {
                 // Check if it was scanned
                 submissionType = isScanned ? 'scan' : 'text';
@@ -85,6 +84,7 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                 type: submissionType,
                 expectedType: clue.type, // Store expected type for validation
                 content: submissionContent,
+                ...(cloudinaryPublicId ? { cloudinaryPublicId } : {}),
                 status: 'pending',
                 submittedAt: serverTimestamp()
             });
