@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Unlock, Search } from 'lucide-react';
+import { Trophy, Unlock, Search, XCircle, X } from 'lucide-react';
 import ClueDisplay from '../../components/player/ClueDisplay';
 import Leaderboard from '../../components/player/Leaderboard';
 import Announcements from '../../components/player/Announcements';
 import BottomNav from '../../components/player/BottomNav';
 import MysteryDrawer from '../../components/player/MysteryDrawer';
-import { useClues } from '../../hooks/useFirestore';
-import { useTeam } from '../../hooks/useFirestore';
+import { useClues, useTeam } from '../../hooks/useFirestore';
 import { useMysteryData, useUnlockedEvidence, useTeamAccusation } from '../../hooks/useMystery';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 
 type TabType = 'clues' | 'leaderboard' | 'announcements';
@@ -26,6 +25,9 @@ export default function PlayerDashboard() {
     const { team, loading: teamLoading } = useTeam(currentUser?.teamId);
     const { mystery } = useMysteryData();
     const { unlockedEvidence } = useUnlockedEvidence(team?.completedClues || []);
+
+    // Rejection toast state
+    const [rejectionToasts, setRejectionToasts] = useState<Array<{ id: string; message: string }>>([]);
 
     const completedClueIds = team?.completedClues || [];
     const totalCount = clues.length;
@@ -48,6 +50,40 @@ export default function PlayerDashboard() {
     // Find current clue (first incomplete clue)
     const currentClue = clues.find(clue => !completedClueIds.includes(clue.id));
     const currentClueIndex = currentClue ? clues.findIndex(c => c.id === currentClue.id) : -1;
+
+    // Listen for rejection notifications pushed by coordinator
+    useEffect(() => {
+        if (!currentUser?.teamId) return;
+
+        const q = query(
+            collection(db, 'notifications'),
+            where('teamId', '==', currentUser.teamId),
+            where('read', '==', false),
+            orderBy('createdAt', 'asc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added') {
+                    const data = change.doc.data();
+                    const toastId = change.doc.id;
+
+                    // Show toast
+                    setRejectionToasts(prev => [...prev, { id: toastId, message: data.message || 'Your submission was rejected. Try again!' }]);
+
+                    // Auto-dismiss after 8 seconds
+                    setTimeout(() => {
+                        setRejectionToasts(prev => prev.filter(t => t.id !== toastId));
+                    }, 8000);
+
+                    // Mark as read in Firestore so it doesn't re-appear on refresh
+                    updateDoc(doc(db, 'notifications', toastId), { read: true });
+                }
+            });
+        });
+
+        return () => unsubscribe();
+    }, [currentUser?.teamId]);
 
     // Track unread announcements
     useEffect(() => {
@@ -243,6 +279,28 @@ export default function PlayerDashboard() {
                     )}
                 </button>
             )}
+
+            {/* Rejection Toasts */}
+            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm pointer-events-none">
+                {rejectionToasts.map(toast => (
+                    <div
+                        key={toast.id}
+                        className="flex items-start gap-3 bg-red-600 text-white px-4 py-3 rounded-2xl shadow-2xl pointer-events-auto animate-fade-in"
+                    >
+                        <XCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm">Submission Rejected</p>
+                            <p className="text-xs text-red-200">{toast.message}</p>
+                        </div>
+                        <button
+                            onClick={() => setRejectionToasts(prev => prev.filter(t => t.id !== toast.id))}
+                            className="flex-shrink-0 hover:text-red-200 transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                ))}
+            </div>
 
             {/* Mystery Drawer */}
             <MysteryDrawer

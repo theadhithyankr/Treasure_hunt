@@ -57,6 +57,16 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                 status: 'rejected'
             });
 
+            // Push a notification so the player sees a toast in real time
+            await addDoc(collection(db, 'notifications'), {
+                teamId: submission.teamId,
+                type: 'rejection',
+                clueTitle: submission.clueTitle,
+                message: `Your answer for "${submission.clueTitle}" was rejected. Try again!`,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+
             hapticSuccess();
         } catch (err: any) {
             hapticError();
