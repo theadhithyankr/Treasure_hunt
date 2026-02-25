@@ -58,9 +58,12 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
     const handleReject = async (submission: Submission) => {
         if (!confirm(`Reject submission from ${submission.teamName}?`)) return;
 
+        const reason = prompt('Optional: Enter a rejection reason for the team (leave blank to skip)') ?? '';
+
         try {
             await updateDoc(doc(db, 'submissions', submission.id), {
-                status: 'rejected'
+                status: 'rejected',
+                ...(reason.trim() ? { feedback: reason.trim() } : {})
             });
 
             // Delete submission image from Cloudinary — no longer needed
@@ -69,11 +72,15 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
             }
 
             // Push a notification so the player sees a toast in real time
+            const notifMessage = reason.trim()
+                ? `Your answer for "${submission.clueTitle}" was rejected. Reason: ${reason.trim()}`
+                : `Your answer for "${submission.clueTitle}" was rejected. Try again!`;
+
             await addDoc(collection(db, 'notifications'), {
                 teamId: submission.teamId,
                 type: 'rejection',
                 clueTitle: submission.clueTitle,
-                message: `Your answer for "${submission.clueTitle}" was rejected. Try again!`,
+                message: notifMessage,
                 read: false,
                 createdAt: serverTimestamp()
             });
