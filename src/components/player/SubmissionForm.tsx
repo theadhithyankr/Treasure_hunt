@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useState, useRef, useEffect } from 'react';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Clue } from '../../types';
 import { compressImage } from '../../utils/imageCompression';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
-import { QrCode, Camera, Check } from 'lucide-react';
+import { QrCode, Camera, Check, Clock, XCircle, RotateCcw } from 'lucide-react';
 import CameraScanner from './CameraScanner';
 
 interface SubmissionFormProps {
@@ -21,7 +21,36 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [isScanned, setIsScanned] = useState(false);
+    const [submissionStatus, setSubmissionStatus] = useState<'pending' | 'rejected' | null>(null);
+    const [rejectionFeedback, setRejectionFeedback] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Real-time listener: watch for pending/rejected submission on this clue
+    useEffect(() => {
+        if (!currentUser?.teamId) return;
+
+        const q = query(
+            collection(db, 'submissions'),
+            where('teamId', '==', currentUser.teamId),
+            where('clueId', '==', clue.id),
+            where('status', 'in', ['pending', 'rejected']),
+            orderBy('submittedAt', 'desc'),
+            limit(1)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (snapshot.empty) {
+                setSubmissionStatus(null);
+                setRejectionFeedback('');
+                return;
+            }
+            const data = snapshot.docs[0].data();
+            setSubmissionStatus(data.status as 'pending' | 'rejected');
+            setRejectionFeedback(data.feedback || '');
+        });
+
+        return () => unsubscribe();
+    }, [currentUser?.teamId, clue.id]);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -90,9 +119,7 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
             });
 
             hapticSuccess();
-            alert('Submission sent! Wait for coordinator approval.');
-
-            // Reset form
+            // Reset form — status will update via the onSnapshot listener
             setTextAnswer('');
             setSelectedFile(null);
             setPreviewUrl(null);
@@ -108,11 +135,43 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
         return textAnswer.trim().length > 0 || selectedFile !== null;
     };
 
+    // ── Waiting for approval ──────────────────────────────────────────────────
+    if (submissionStatus === 'pending') {
+        return (
+            <div className="glass rounded-3xl shadow-glass p-6">
+                <div className="flex flex-col items-center justify-center py-6 text-center gap-3">
+                    <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Clock className="w-7 h-7 text-amber-500 animate-pulse" />
+                    </div>
+                    <div>
+                        <h3 className="text-base font-bold text-amber-700">Waiting for Approval</h3>
+                        <p className="text-sm text-gray-500 mt-1">Your answer has been submitted and is being reviewed by the coordinator.</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <>
+            {/* Rejection banner — shown above the form so player can try again */}
+            {submissionStatus === 'rejected' && (
+                <div className="flex items-start gap-3 bg-red-50 border-2 border-red-200 rounded-2xl px-4 py-3">
+                    <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="font-bold text-red-700 text-sm">Submission Rejected</p>
+                        {rejectionFeedback
+                            ? <p className="text-xs text-red-600 mt-0.5">{rejectionFeedback}</p>
+                            : <p className="text-xs text-red-500 mt-0.5">Please try again with a different answer.</p>
+                        }
+                    </div>
+                    <RotateCcw className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} className="glass rounded-3xl shadow-glass p-6 space-y-4">
                 <h3 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
-                    Submit Your Answer
+                    {submissionStatus === 'rejected' ? 'Try Again' : 'Submit Your Answer'}
                 </h3>
 
                 {/* Text Input - Always shown */}
