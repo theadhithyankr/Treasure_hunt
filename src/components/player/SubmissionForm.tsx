@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Clue } from '../../types';
@@ -29,15 +29,11 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
         if (!file) return;
 
         try {
-            // Compress image
             const compressedFile = await compressImage(file);
             setSelectedFile(compressedFile);
 
-            // Create preview
             const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewUrl(reader.result as string);
-            };
+            reader.onloadend = () => setPreviewUrl(reader.result as string);
             reader.readAsDataURL(compressedFile);
         } catch (err) {
             setError('Failed to process image');
@@ -55,39 +51,85 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser?.teamId || !currentUser?.teamName) return;
+        // Prevent double-tap / accidental re-submit
+        if (submitting) return;
 
         setSubmitting(true);
         setError('');
 
         try {
-            let submissionContent = textAnswer;
-            let submissionType = 'text';
-            let cloudinaryPublicId: string | undefined;
-
-            // Determine what type of submission this is
-            if (selectedFile) {
-                submissionType = 'photo';
-                const { url, publicId } = await uploadToCloudinary(selectedFile);
-                submissionContent = url;
-                cloudinaryPublicId = publicId;
-            } else if (textAnswer.trim()) {
-                // Check if it was scanned
-                submissionType = isScanned ? 'scan' : 'text';
+            // ── Duplicate guard ─────────────────────────────────────────────
+            // Check if this team already has a pending/approved submission for
+            // this exact clue so that concurrent taps don't create duplicates.
+            const dupQuery = query(
+                collection(db, 'submissions'),
+                where('teamId', '==', currentUser.teamId),
+                where('clueId', '==', clue.id),
+                where('status', 'in', ['pending', 'approved', 'uploading'])
+            );
+            const dupSnap = await getDocs(dupQuery);
+            if (!dupSnap.empty) {
+                setError('You already have a submission pending for this clue.');
+                hapticError();
+                setSubmitting(false);
+                return;
             }
 
-            // Create submission
-            await addDoc(collection(db, 'submissions'), {
-                teamId: currentUser.teamId,
-                teamName: currentUser.teamName,
-                clueId: clue.id,
-                clueTitle: clue.title,
-                type: submissionType,
-                expectedType: clue.type, // Store expected type for validation
-                content: submissionContent,
-                ...(cloudinaryPublicId ? { cloudinaryPublicId } : {}),
-                status: 'pending',
-                submittedAt: serverTimestamp()
-            });
+            const isPhoto = !!selectedFile;
+            const submissionType = isPhoto ? 'photo' : isScanned ? 'scan' : 'text';
+
+            if (isPhoto) {
+                // ── OPTIMISTIC WRITE ──────────────────────────────────────────
+                // Write a placeholder immediately so the coordinator sees the
+                // submission arrive in real time, even before the upload finishes.
+                const docRef = await addDoc(collection(db, 'submissions'), {
+                    teamId: currentUser.teamId,
+                    teamName: currentUser.teamName,
+                    clueId: clue.id,
+                    clueTitle: clue.title,
+                    type: submissionType,
+                    expectedType: clue.type,
+                    content: '',           // will be filled in after upload
+                    status: 'pending',
+                    uploading: true,       // coordinator can show a "⏳ uploading" badge
+                    submittedAt: serverTimestamp(),
+                });
+
+                try {
+                    const { url, publicId } = await uploadToCloudinary(selectedFile!);
+
+                    // Patch the placeholder with the real URL
+                    await updateDoc(doc(db, 'submissions', docRef.id), {
+                        content: url,
+                        cloudinaryPublicId: publicId,
+                        uploading: false,
+                    });
+                } catch (uploadErr: any) {
+                    // Mark the submission as failed so coordinator / player can see it
+                    await updateDoc(doc(db, 'submissions', docRef.id), {
+                        status: 'upload_failed',
+                        uploading: false,
+                    });
+                    hapticError();
+                    setError('Photo upload failed — please try again.');
+                    setSubmitting(false);
+                    return;
+                }
+            } else {
+                // Text / scan — plain Firestore write, always fast
+                await addDoc(collection(db, 'submissions'), {
+                    teamId: currentUser.teamId,
+                    teamName: currentUser.teamName,
+                    clueId: clue.id,
+                    clueTitle: clue.title,
+                    type: submissionType,
+                    expectedType: clue.type,
+                    content: textAnswer.trim(),
+                    status: 'pending',
+                    uploading: false,
+                    submittedAt: serverTimestamp(),
+                });
+            }
 
             hapticSuccess();
             alert('Submission sent! Wait for coordinator approval.');
@@ -96,17 +138,16 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
             setTextAnswer('');
             setSelectedFile(null);
             setPreviewUrl(null);
+            setIsScanned(false);
         } catch (err: any) {
             hapticError();
-            setError(err.message || 'Failed to submit');
+            setError(err.message || 'Failed to submit. Please try again.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const canSubmit = () => {
-        return textAnswer.trim().length > 0 || selectedFile !== null;
-    };
+    const canSubmit = () => textAnswer.trim().length > 0 || selectedFile !== null;
 
     return (
         <>
@@ -202,7 +243,11 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                     className="btn-primary"
                     disabled={!canSubmit() || submitting}
                 >
-                    {submitting ? 'Submitting...' : (
+                    {submitting ? (
+                        selectedFile
+                            ? 'Uploading photo…'
+                            : 'Submitting…'
+                    ) : (
                         <span className="flex items-center justify-center gap-2">
                             <Check className="w-5 h-5" /> Submit Answer
                         </span>

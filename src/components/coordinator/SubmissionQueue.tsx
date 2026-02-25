@@ -3,13 +3,16 @@ import { db } from '../../config/firebase';
 import type { Submission } from '../../types';
 import { deleteFromCloudinary } from '../../utils/cloudinary';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
-import { Check, PenTool, Camera, QrCode, Trash2, X } from 'lucide-react';
+import { Check, PenTool, Camera, QrCode, Trash2, X, Loader2, AlertTriangle } from 'lucide-react';
 import { formatTimestamp } from '../../utils/helpers';
 
 interface SubmissionQueueProps {
     submissions: Submission[];
     loading: boolean;
 }
+
+// Filter out upload_failed so the queue only shows actionable items by default
+// but still allow the coordinator to delete failed ones.
 
 export default function SubmissionQueue({ submissions, loading }: SubmissionQueueProps) {
     const handleApprove = async (submission: Submission) => {
@@ -131,6 +134,19 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                                     <div>
                                         <h3 className="font-bold text-lg text-gray-900">{submission.teamName}</h3>
                                         <p className="text-sm text-primary-600">{submission.clueTitle}</p>
+                                        {/* Upload status badges */}
+                                        {submission.uploading && (
+                                            <span className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                                                <Loader2 className="w-3 h-3 animate-spin" />
+                                                Photo uploading…
+                                            </span>
+                                        )}
+                                        {submission.status === 'upload_failed' && (
+                                            <span className="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full px-2 py-0.5">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                Upload failed
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="text-xs text-gray-500">
                                         {formatTimestamp(submission.submittedAt)}
@@ -171,11 +187,12 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
 
                             {/* Action Buttons */}
                             <div className="flex gap-2">
-                                {submission.status === 'pending' ? (
+                                {submission.status === 'pending' && !submission.uploading ? (
                                     <>
                                         <button
                                             onClick={() => handleApprove(submission)}
-                                            className="flex-1 py-3 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                                            disabled={submission.type === 'photo' && !submission.content}
+                                            className="flex-1 py-3 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-2xl font-bold shadow-lg hover:shadow-xl active:scale-95 transition-all flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             <Check className="w-4 h-4" />
                                             Approve
@@ -188,6 +205,10 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
                                             Reject
                                         </button>
                                     </>
+                                ) : submission.status === 'pending' && submission.uploading ? (
+                                    <div className="flex-1 py-3 text-center text-sm text-amber-600 font-semibold">
+                                        Waiting for photo…
+                                    </div>
                                 ) : (
                                     <button
                                         onClick={() => handleDelete(submission)}

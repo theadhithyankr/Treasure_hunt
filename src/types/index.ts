@@ -26,7 +26,9 @@ export interface Submission {
     content: string; // answer or photo URL
     cloudinaryPublicId?: string; // set only for photo submissions
     type: 'text' | 'photo' | 'scan';
-    status: 'pending' | 'approved' | 'rejected';
+    status: 'pending' | 'approved' | 'rejected' | 'upload_failed';
+    /** True while a photo is still being uploaded to Cloudinary */
+    uploading?: boolean;
     submittedAt: Date;
 }
 
