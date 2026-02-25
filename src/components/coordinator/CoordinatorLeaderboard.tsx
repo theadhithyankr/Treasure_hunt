@@ -1,4 +1,4 @@
-import { Trophy, Users, Shield, ArrowRight } from 'lucide-react';
+import { Trophy, Users, Shield } from 'lucide-react';
 import type { Team, Clue } from '../../types';
 
 interface CoordinatorLeaderboardProps {
