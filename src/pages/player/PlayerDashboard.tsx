@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Unlock, Search, XCircle, X } from 'lucide-react';
 import ClueDisplay from '../../components/player/ClueDisplay';
-import Leaderboard from '../../components/player/Leaderboard';
 import Announcements from '../../components/player/Announcements';
 import BottomNav from '../../components/player/BottomNav';
 import MysteryDrawer from '../../components/player/MysteryDrawer';
@@ -167,26 +166,18 @@ export default function PlayerDashboard() {
                             }`}>
                             {isMysteryUnlocked ? '🕵️ Murder Mystery' : (currentUser?.teamName || team?.name)}
                         </h1>
-                        <p className={`text-sm flex items-center gap-1 ${isMysteryUnlocked ? 'text-slate-400' : 'text-white/90'
-                            }`}>
-                            {!isMysteryInProgress && (
-                                <>
-                                    <Unlock className="w-4 h-4" />
-                                    {completedCount}/{totalCount} Clues Solved
-
-                                    {isMysterySolved && (
-                                        <span className="ml-2 px-2 py-0.5 bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded-full text-xs font-bold text-green-100 flex items-center gap-1">
-                                            ✓ Case Solved
-                                        </span>
-                                    )}
-                                </>
-                            )}
-                            {isMysteryInProgress && (
-                                <span className="text-red-400 font-semibold animate-pulse">
-                                    ⚠️ Mystery in Progress
+                        {isMysteryInProgress && (
+                            <p className="text-sm text-red-400 font-semibold animate-pulse">
+                                ⚠️ Mystery in Progress
+                            </p>
+                        )}
+                        {isMysterySolved && (
+                            <p className="text-sm">
+                                <span className="px-2 py-0.5 bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded-full text-xs font-bold text-green-100">
+                                    ✓ Case Solved
                                 </span>
-                            )}
-                        </p>
+                            </p>
+                        )}
                     </div>
                     <button
                         onClick={handleSignOut}
@@ -246,10 +237,6 @@ export default function PlayerDashboard() {
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
                         </div>
                     )
-                )}
-
-                {activeTab === 'leaderboard' && (
-                    <Leaderboard isMysteryTheme={isMysteryUnlocked} />
                 )}
 
                 {activeTab === 'announcements' && (

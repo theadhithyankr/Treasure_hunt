@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAnnouncements } from '../../hooks/useFirestore';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
@@ -15,6 +15,7 @@ export default function BroadcastPanel() {
     const [priority, setPriority] = useState<'normal' | 'high'>('normal');
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
+    const [isDeletingAll, setIsDeletingAll] = useState(false);
 
     const handleBroadcast = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -76,6 +77,30 @@ export default function BroadcastPanel() {
         } catch (err: any) {
             hapticError();
             alert('Failed to delete announcement: ' + err.message);
+        }
+    };
+
+    const handleDeleteAllAnnouncements = async () => {
+        if (announcements.length === 0) return;
+        if (!confirm(`Are you sure you want to delete ALL ${announcements.length} announcements? This cannot be undone.`)) return;
+
+        setIsDeletingAll(true);
+        try {
+            const batch = writeBatch(db);
+            announcements.forEach((announcement) => {
+                const docRef = doc(db, 'announcements', announcement.id);
+                batch.delete(docRef);
+            });
+            await batch.commit();
+
+            hapticSuccess();
+            alert('All announcements deleted!');
+        } catch (err: any) {
+            hapticError();
+            console.error('Failed to delete all announcements:', err);
+            alert('Failed to delete all announcements: ' + err.message);
+        } finally {
+            setIsDeletingAll(false);
         }
     };
 
@@ -188,9 +213,21 @@ export default function BroadcastPanel() {
             )}
 
             {/* Announcements History */}
-            <h3 className="text-lg font-bold text-gray-900 mb-3">
-                Recent Announcements
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-bold text-gray-900">
+                    Recent Announcements
+                </h3>
+                {announcements.length > 0 && (
+                    <button
+                        onClick={handleDeleteAllAnnouncements}
+                        disabled={isDeletingAll}
+                        className="text-xs px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors font-medium flex items-center gap-1"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                        {isDeletingAll ? 'Deleting...' : 'Delete All'}
+                    </button>
+                )}
+            </div>
 
             {loading ? (
                 <div className="glass rounded-3xl shadow-glass p-6 text-center">

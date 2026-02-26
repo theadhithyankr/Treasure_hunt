@@ -1,4 +1,4 @@
-import { Map, Trophy, Megaphone } from 'lucide-react';
+import { Map, Megaphone } from 'lucide-react';
 
 type TabType = 'clues' | 'leaderboard' | 'announcements';
 
@@ -12,7 +12,6 @@ interface BottomNavProps {
 export default function BottomNav({ activeTab, onTabChange, unreadAnnouncementsCount = 0, isMysteryTheme }: BottomNavProps) {
     const tabs = [
         { id: 'clues' as TabType, icon: Map, label: 'Clue' },
-        { id: 'leaderboard' as TabType, icon: Trophy, label: 'Ranks' },
         { id: 'announcements' as TabType, icon: Megaphone, label: 'News', badge: unreadAnnouncementsCount },
     ];
 
