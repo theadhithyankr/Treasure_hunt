@@ -28,7 +28,9 @@ export default function CoordinatorDashboard() {
         navigate('/');
     };
 
-    const pendingSubmissions = submissions.filter(s => s.status === 'pending');
+    const pendingSubmissions = submissions.filter(
+        s => s.status === 'pending' || s.status === 'upload_failed' || s.uploading
+    );
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50">

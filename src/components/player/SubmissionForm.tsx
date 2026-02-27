@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, query, where, getDocs, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Clue } from '../../types';
 import { compressImage } from '../../utils/imageCompression';
 import { uploadToCloudinary } from '../../utils/cloudinary';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
-import { QrCode, Camera, Check, Clock, XCircle, RotateCcw } from 'lucide-react';
+import { QrCode, Camera, Check, Clock, XCircle, RotateCcw, Info } from 'lucide-react';
 import CameraScanner from './CameraScanner';
 
 interface SubmissionFormProps {
@@ -16,17 +16,20 @@ interface SubmissionFormProps {
 export default function SubmissionForm({ clue }: SubmissionFormProps) {
     const { currentUser } = useAuth();
     const [textAnswer, setTextAnswer] = useState('');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [scannedResult, setScannedResult] = useState<string | null>(null);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [statusFromDb, setStatusFromDb] = useState<string | null>(null);
+    const [rejectionFeedback, setRejectionFeedback] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    // New state for photo upload
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-    const [showScanner, setShowScanner] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState('');
     const [isScanned, setIsScanned] = useState(false);
-    const [submissionStatus, setSubmissionStatus] = useState<'pending' | 'rejected' | null>(null);
-    const [rejectionFeedback, setRejectionFeedback] = useState('');
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Real-time listener: watch for pending/rejected submission on this clue
+    // Real-time status listener for this specific clue
     useEffect(() => {
         if (!currentUser?.teamId) return;
 
@@ -34,114 +37,179 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
             collection(db, 'submissions'),
             where('teamId', '==', currentUser.teamId),
             where('clueId', '==', clue.id),
-            where('status', 'in', ['pending', 'rejected']),
             orderBy('submittedAt', 'desc'),
             limit(1)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            if (snapshot.empty) {
-                setSubmissionStatus(null);
-                setRejectionFeedback('');
-                return;
+            if (!snapshot.empty) {
+                const data = snapshot.docs[0].data();
+                setStatusFromDb(data.status);
+                if (data.status === 'rejected') {
+                    setRejectionFeedback(data.feedback || null);
+                } else {
+                    setRejectionFeedback(null);
+                }
+            } else {
+                setStatusFromDb(null);
             }
-            const data = snapshot.docs[0].data();
-            setSubmissionStatus(data.status as 'pending' | 'rejected');
-            setRejectionFeedback(data.feedback || '');
         });
 
+        // Cleanup listener
         return () => unsubscribe();
     }, [currentUser?.teamId, clue.id]);
 
-    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const submissionStatus = statusFromDb || 'none'; // 'none', 'pending', 'approved', 'rejected'
 
-        try {
-            // Compress image
-            const compressedFile = await compressImage(file);
-            setSelectedFile(compressedFile);
-
-            // Create preview
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewUrl(reader.result as string);
-            };
-            reader.readAsDataURL(compressedFile);
-        } catch (err) {
-            setError('Failed to process image');
-            hapticError();
+    const handleCameraScan = (result: string) => {
+        if (result) {
+            setScannedResult(result);
+            setTextAnswer(result);
+            setIsCameraOpen(false);
+            setIsScanned(true);
+            hapticSuccess();
         }
     };
 
-    const handleScanComplete = (scannedValue: string) => {
-        setTextAnswer(scannedValue);
-        setIsScanned(true);
-        setShowScanner(false);
-        hapticSuccess();
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            try {
+                const file = e.target.files[0];
+                // Compress image before setting state
+                const compressed = await compressImage(file);
+                setSelectedFile(compressed);
+                // Create preview URL
+                const url = URL.createObjectURL(compressed);
+                setPreviewUrl(url);
+                setError(null);
+            } catch (err) {
+                console.error("Error processing image:", err);
+                setError("Failed to process image. Please try again.");
+            }
+        }
+    };
+
+    const clearFile = () => {
+        setSelectedFile(null);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser?.teamId || !currentUser?.teamName) return;
 
+        setError(null);
         setSubmitting(true);
-        setError('');
 
         try {
-            let submissionContent = textAnswer;
-            let submissionType = 'text';
-            let cloudinaryPublicId: string | undefined;
-
-            // Determine what type of submission this is
-            if (selectedFile) {
-                submissionType = 'photo';
-                const { url, publicId } = await uploadToCloudinary(selectedFile);
-                submissionContent = url;
-                cloudinaryPublicId = publicId;
-            } else if (textAnswer.trim()) {
-                // Check if it was scanned
-                submissionType = isScanned ? 'scan' : 'text';
+            // Check for existing pending/approved submissions to prevent duplicates
+            const dupQuery = query(
+                collection(db, 'submissions'),
+                where('teamId', '==', currentUser.teamId),
+                where('clueId', '==', clue.id),
+                where('status', 'in', ['pending', 'approved', 'uploading'])
+            );
+            const dupSnap = await getDocs(dupQuery);
+            if (!dupSnap.empty) {
+                setError('You already have a submission pending for this clue.');
+                hapticError();
+                setSubmitting(false);
+                return;
             }
 
-            // Create submission
-            await addDoc(collection(db, 'submissions'), {
-                teamId: currentUser.teamId,
-                teamName: currentUser.teamName,
-                clueId: clue.id,
-                clueTitle: clue.title,
-                type: submissionType,
-                expectedType: clue.type, // Store expected type for validation
-                content: submissionContent,
-                ...(cloudinaryPublicId ? { cloudinaryPublicId } : {}),
-                status: 'pending',
-                submittedAt: serverTimestamp()
-            });
-            // Update team status tracking for solving time
-            try {
-                await updateDoc(doc(db, 'teams', currentUser.teamId), {
-                    [`clueStatuses.${clue.id}.status`]: 'pending',
-                    [`clueStatuses.${clue.id}.submittedAt`]: serverTimestamp()
+            const isPhoto = !!selectedFile;
+            const submissionType = isPhoto ? 'photo' : isScanned ? 'scan' : 'text';
+
+            if (isPhoto) {
+                // ── OPTIMISTIC WRITE ──────────────────────────────────────────
+                // Write a placeholder immediately so the coordinator sees the
+                // submission arrive in real time, even before the upload finishes.
+                const docRef = await addDoc(collection(db, 'submissions'), {
+                    teamId: currentUser.teamId,
+                    teamName: currentUser.teamName,
+                    clueId: clue.id,
+                    clueTitle: clue.title,
+                    type: submissionType,
+                    expectedType: clue.type,
+                    content: '',           // will be filled in after upload
+                    status: 'pending',
+                    uploading: true,       // coordinator can show a "⏳ uploading" badge
+                    submittedAt: serverTimestamp(),
                 });
-            } catch (error) {
-                console.error("Error updating team clue status:", error);
+
+                // Update team status tracking for solving time
+                try {
+                    await updateDoc(doc(db, 'teams', currentUser.teamId), {
+                        [`clueStatuses.${clue.id}.status`]: 'pending',
+                        [`clueStatuses.${clue.id}.submittedAt`]: serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error("Error updating team clue status:", error);
+                }
+
+                try {
+                    const { url, publicId } = await uploadToCloudinary(selectedFile!);
+
+                    // Patch the placeholder with the real URL
+                    await updateDoc(doc(db, 'submissions', docRef.id), {
+                        content: url,
+                        cloudinaryPublicId: publicId,
+                        uploading: false,
+                    });
+                } catch (uploadErr: any) {
+                    // Mark the submission as failed so coordinator / player can see it
+                    await updateDoc(doc(db, 'submissions', docRef.id), {
+                        status: 'upload_failed',
+                        uploading: false,
+                    });
+                    hapticError();
+                    setError('Photo upload failed — please try again.');
+                    setSubmitting(false);
+                    return;
+                }
+            } else {
+                // Text / scan — plain Firestore write, always fast
+                await addDoc(collection(db, 'submissions'), {
+                    teamId: currentUser.teamId,
+                    teamName: currentUser.teamName,
+                    clueId: clue.id,
+                    clueTitle: clue.title,
+                    type: submissionType,
+                    expectedType: clue.type,
+                    content: textAnswer.trim(),
+                    status: 'pending',
+                    uploading: false,
+                    submittedAt: serverTimestamp(),
+                });
+
+                // Update team status tracking for solving time
+                try {
+                    await updateDoc(doc(db, 'teams', currentUser.teamId), {
+                        [`clueStatuses.${clue.id}.status`]: 'pending',
+                        [`clueStatuses.${clue.id}.submittedAt`]: serverTimestamp()
+                    });
+                } catch (error) {
+                    console.error("Error updating team clue status:", error);
+                }
             }
+
             hapticSuccess();
             // Reset form — status will update via the onSnapshot listener
             setTextAnswer('');
             setSelectedFile(null);
             setPreviewUrl(null);
+            setIsScanned(false);
         } catch (err: any) {
             hapticError();
-            setError(err.message || 'Failed to submit');
+            setError(err.message || 'Failed to submit. Please try again.');
         } finally {
             setSubmitting(false);
         }
     };
 
-    const canSubmit = () => {
-        return textAnswer.trim().length > 0 || selectedFile !== null;
-    };
+    const canSubmit = () => textAnswer.trim().length > 0 || selectedFile !== null;
 
     // ── Waiting for approval ──────────────────────────────────────────────────
     if (submissionStatus === 'pending') {
@@ -187,103 +255,105 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Text Answer
                     </label>
-                    <textarea
-                        value={textAnswer}
-                        onChange={(e) => {
-                            setTextAnswer(e.target.value);
-                            setIsScanned(false);
-                        }}
-                        placeholder="Enter your answer..."
-                        className="input-field"
-                        rows={3}
-                        disabled={submitting}
-                    />
-                </div>
-
-                {/* Action Buttons Row */}
-                <div className="grid grid-cols-2 gap-3">
-                    {/* QR/Barcode Scanner Button - Always shown */}
-                    <button
-                        type="button"
-                        onClick={() => setShowScanner(true)}
-                        className="flex flex-col items-center justify-center py-4 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all"
-                        disabled={submitting}
-                    >
-                        <QrCode className="w-8 h-8 mb-1" />
-                        <span className="text-sm font-semibold">Scan Code</span>
-                    </button>
-
-                    {/* Photo Upload Button - Always shown */}
-                    <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="flex flex-col items-center justify-center py-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-2xl shadow-lg hover:shadow-xl active:scale-95 transition-all"
-                        disabled={submitting}
-                    >
-                        <Camera className="w-8 h-8 mb-1" />
-                        <span className="text-sm font-semibold">Take Photo</span>
-                    </button>
-                </div>
-
-                {/* Hidden file input */}
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                />
-
-                {/* Photo Preview */}
-                {previewUrl && (
-                    <div className="space-y-2">
-                        <p className="text-sm font-semibold text-gray-700">Photo Preview:</p>
-                        <img
-                            src={previewUrl}
-                            alt="Preview"
-                            className="w-full rounded-lg shadow-md"
+                    <div className="relative">
+                        <textarea
+                            value={textAnswer}
+                            onChange={(e) => {
+                                setTextAnswer(e.target.value);
+                                if (e.target.value && isScanned) setIsScanned(false);
+                            }}
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all resize-none min-h-[100px]"
+                            placeholder="Type your answer here..."
                         />
                         <button
                             type="button"
-                            onClick={() => {
-                                setSelectedFile(null);
-                                setPreviewUrl(null);
-                            }}
-                            className="w-full py-2 bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-300 transition-colors"
-                            disabled={submitting}
+                            onClick={() => setIsCameraOpen(true)}
+                            className="absolute bottom-3 right-3 p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+                            title="Scan QR Code"
                         >
-                            Remove Photo
+                            <QrCode className="w-5 h-5" />
                         </button>
                     </div>
-                )}
+                </div>
+
+                {/* File Upload */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Photo Evidence (Optional)
+                    </label>
+                    <div className="relative">
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                            id="photo-upload"
+                        />
+                        
+                        {!previewUrl ? (
+                            <label
+                                htmlFor="photo-upload"
+                                className="flex items-center justify-center gap-2 w-full p-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all text-gray-500 hover:text-primary-600"
+                            >
+                                <Camera className="w-5 h-5" />
+                                <span className="text-sm font-medium">Take Photo or Upload</span>
+                            </label>
+                        ) : (
+                            <div className="relative rounded-xl overflow-hidden border border-gray-200">
+                                <img 
+                                    src={previewUrl} 
+                                    alt="Preview" 
+                                    className="w-full h-48 object-cover object-center"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={clearFile}
+                                    className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-full text-red-500 hover:bg-red-50 transition-colors shadow-sm"
+                                >
+                                    <XCircle className="w-5 h-5" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 {error && (
-                    <div className="bg-red-50 border-2 border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm">
+                    <div className="text-red-500 text-sm bg-red-50 p-3 rounded-xl flex items-center gap-2">
+                        <Info className="w-4 h-4 flex-shrink-0" />
                         {error}
                     </div>
                 )}
 
                 <button
                     type="submit"
-                    className="btn-primary"
                     disabled={!canSubmit() || submitting}
+                    className={`w-full py-3.5 px-6 rounded-xl font-bold text-white shadow-lg transition-all transform active:scale-[0.98] flex items-center justify-center gap-2
+                        ${!canSubmit() || submitting
+                            ? 'bg-gray-300 cursor-not-allowed shadow-none'
+                            : 'bg-gradient-primary hover:shadow-xl hover:-translate-y-0.5'
+                        }`}
                 >
-                    {submitting ? 'Submitting...' : (
-                        <span className="flex items-center justify-center gap-2">
-                            <Check className="w-5 h-5" /> Submit Answer
-                        </span>
+                    {submitting ? (
+                        <>
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <span>Submitting...</span>
+                        </>
+                    ) : (
+                        <>
+                            <span>Submit Answer</span>
+                            <Check className="w-5 h-5" />
+                        </>
                     )}
                 </button>
             </form>
 
-            {/* Camera Scanner Modal */}
-            {showScanner && (
-                <CameraScanner
-                    onScanComplete={handleScanComplete}
-                    onClose={() => setShowScanner(false)}
-                />
-            )}
+            <CameraScanner
+                isOpen={isCameraOpen}
+                onClose={() => setIsCameraOpen(false)}
+                onScan={handleCameraScan}
+            />
         </>
     );
 }
