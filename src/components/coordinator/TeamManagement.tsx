@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { Team } from '../../types';
+import type { Team, ClueStatus } from '../../types';
 import { generateTeamCode } from '../../utils/helpers';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 import { Trophy, Users, Edit2, Trash2, RotateCcw } from 'lucide-react';
@@ -26,10 +26,29 @@ export default function TeamManagement({ teams, loading }: TeamManagementProps) 
         try {
             const teamCode = generateTeamCode();
 
+            // Fetch the first clue to initialize status
+            const cluesQuery = query(collection(db, 'clues'), orderBy('index', 'asc'), limit(1));
+            const clueSnap = await getDocs(cluesQuery);
+            
+            const clueStatuses: Record<string, ClueStatus> = {};
+            let currentClueId: string | undefined;
+
+            if (!clueSnap.empty) {
+                const firstClue = clueSnap.docs[0];
+                currentClueId = firstClue.id;
+                clueStatuses[firstClue.id] = {
+                    clueId: firstClue.id,
+                    unlockedAt: serverTimestamp(),
+                    status: 'active'
+                };
+            }
+
             await addDoc(collection(db, 'teams'), {
                 name: teamName,
                 code: teamCode,
                 completedClues: [],
+                clueStatuses,
+                currentClueId,
                 createdAt: serverTimestamp()
             });
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { updateDoc, doc } from 'firebase/firestore';
+import { updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { TreasureConfig } from '../../types';
 import { MapPin, FlaskConical, CheckCircle, XCircle, Trophy } from 'lucide-react';
+import { hapticSuccess, hapticError } from '../../utils/haptics';
 
 interface TreasureRevealScreenProps {
     teamId: string;
@@ -23,6 +24,7 @@ export default function TreasureRevealScreen({
     );
     const [shaking, setShaking] = useState(false);
     const [imageOpen, setImageOpen] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (alreadyCompleted) setStatus('correct');
@@ -30,21 +32,42 @@ export default function TreasureRevealScreen({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const trimmed = answer.trim().toLowerCase();
-        const correct = config.missingAnswer?.trim().toLowerCase() || '';
+        
+        // If no answer is configured, treat any non-empty answer as correct or show error?
+        // Better: Validate that a correct answer exists.
+        const correct = config.missingAnswer ? config.missingAnswer.trim().toLowerCase() : '';
 
-        if (!correct) return;
+        if (!correct) {
+            console.error("No correct answer configured");
+            setError('Configuration error: No answer set by coordinator.');
+            return;
+        }
+
+        const trimmed = answer.trim().toLowerCase();
 
         if (trimmed === correct) {
-            setStatus('correct');
             try {
-                await updateDoc(doc(db, 'teams', teamId), { formulaCompleted: true });
+                // Update DB first to ensure it saves
+                await updateDoc(doc(db, 'teams', teamId), { 
+                    formulaCompleted: true,
+                    treasureFoundAt: serverTimestamp()
+                });
+                setStatus('correct');
+                hapticSuccess();
             } catch (err) {
                 console.error('Failed to save formula completion:', err);
+                // Still show success to user? Or error? 
+                // Showing success is risk if it didn't save.
+                // But for a game, blocking usage due to network might be annoying. 
+                // Let's optimistic update but log error. 
+                // For now, let's just proceed to success screen.
+                setStatus('correct'); 
             }
         } else {
             setStatus('wrong');
             setShaking(true);
+            hapticError();
+            setError(''); // Clear any system errors on wrong answer attempts
             setTimeout(() => {
                 setShaking(false);
                 setStatus('idle');
@@ -179,6 +202,13 @@ export default function TreasureRevealScreen({
                             <p className="text-stone-400 text-xs mb-4 text-center tracking-widest uppercase">
                                 Complete the formula — enter the missing value
                             </p>
+
+                            {error && (
+                                <div className="bg-red-900/40 border border-red-500/50 rounded-xl p-3 mb-4 text-red-200 text-sm flex items-center gap-2">
+                                    <XCircle className="w-5 h-5 flex-shrink-0" />
+                                    {error}
+                                </div>
+                            )}
 
                             <form onSubmit={handleSubmit} className="space-y-3">
                                 <div

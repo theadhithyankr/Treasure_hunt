@@ -1,9 +1,29 @@
+export interface ClueStatus {
+    clueId: string;
+    unlockedAt: any; // Firestore Timestamp or Date
+    submittedAt?: any;
+    approvedAt?: any;
+    status: 'locked' | 'active' | 'pending' | 'completed';
+}
+
 export interface Team {
     id: string;
     name: string;
     code: string; // 6-digit join code
     completedClues: string[]; // clue IDs
+    clueStatuses?: Record<string, ClueStatus>; // Map<clueId, ClueStatus>
+    currentClueId?: string; // Track which clue is active
     createdAt: Date;
+    formulaCompleted?: boolean;
+    treasureApproved?: boolean; // Final approval by coordinator
+    treasureFoundAt?: any;
+}
+
+export interface TreasureConfig {
+    mapImageUrl?: string;
+    mapDescription?: string;
+    formulaText?: string;
+    missingAnswer?: string;
 }
 
 export interface Clue {

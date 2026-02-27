@@ -1,5 +1,5 @@
 import { Trophy, Users, Shield } from 'lucide-react';
-import type { Team, Clue } from '../../types';
+import type { Team, Clue, ClueStatus } from '../../types';
 
 interface CoordinatorLeaderboardProps {
     teams: Team[];
@@ -8,12 +8,37 @@ interface CoordinatorLeaderboardProps {
 }
 
 export default function CoordinatorLeaderboard({ teams, clues, onManageTeams }: CoordinatorLeaderboardProps) {
-    // Sort teams by completed clues count (descending)
-    // Note: detailed timestamps aren't available in Team type yet, so we sort by count only
+    const calculateNetTime = (team: Team): number => {
+        if (!team.clueStatuses) return 0;
+        let totalNetTime = 0;
+        Object.values(team.clueStatuses).forEach((status: ClueStatus) => {
+            // Only count time if both start and submit timestamps exist
+            // This ignores approval time delays
+            if (status.unlockedAt && status.submittedAt) {
+                const start = status.unlockedAt?.toDate ? status.unlockedAt.toDate() : new Date(status.unlockedAt);
+                const end = status.submittedAt?.toDate ? status.submittedAt.toDate() : new Date(status.submittedAt);
+                totalNetTime += (end.getTime() - start.getTime());
+            }
+        });
+        return totalNetTime;
+    };
+
+    // Sort teams by completed clues count (descending), then by net solving time (ascending)
     const sortedTeams = [...teams].sort((a, b) => {
         const countA = a.completedClues?.length || 0;
         const countB = b.completedClues?.length || 0;
+        
+        // Primary Sort: Clue Progress
         if (countA !== countB) return countB - countA;
+        
+        // Secondary Sort: Net Solving Time (Lower is better)
+        const timeA = calculateNetTime(a);
+        const timeB = calculateNetTime(b);
+        
+        if (timeA > 0 && timeB > 0 && timeA !== timeB) return timeA - timeB;
+        if (timeA > 0 && timeB === 0) return -1; // Tracked beats untracked? Or vice versa. Let's say tracked is prioritized if same clues.
+        
+        // Tertiary Sort: Alphabetical
         return a.name.localeCompare(b.name);
     });
 

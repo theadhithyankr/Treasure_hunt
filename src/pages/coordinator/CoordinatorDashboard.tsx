@@ -1,22 +1,24 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, Check, Megaphone, Search } from 'lucide-react';
+import { Users, FileText, Check, Megaphone, Search, Activity } from 'lucide-react';
 import TeamManagement from '../../components/coordinator/TeamManagement';
 import ClueManagement from '../../components/coordinator/ClueManagement';
 import SubmissionQueue from '../../components/coordinator/SubmissionQueue';
 import BroadcastPanel from '../../components/coordinator/BroadcastPanel';
 import MysteryManagement from '../../components/coordinator/MysteryManagement';
 import CoordinatorLeaderboard from '../../components/coordinator/CoordinatorLeaderboard';
+import LiveProgress from '../../components/coordinator/LiveProgress';
 import { useTeams, useClues, useSubmissions } from '../../hooks/useFirestore';
 
 type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast' | 'mystery';
+type TeamViewType = 'leaderboard' | 'management' | 'tracking';
 
 export default function CoordinatorDashboard() {
     const { signOut } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>('teams');
-    const [showTeamManagement, setShowTeamManagement] = useState(false);
+    const [teamView, setTeamView] = useState<TeamViewType>('leaderboard');
 
     const { teams, loading: teamsLoading } = useTeams();
     const { clues, loading: cluesLoading } = useClues();
@@ -52,23 +54,54 @@ export default function CoordinatorDashboard() {
             {/* Main Content */}
             <main className="pb-20">
                 {activeTab === 'teams' && (
-                    !showTeamManagement ? (
-                        <CoordinatorLeaderboard
-                            teams={teams}
-                            clues={clues}
-                            onManageTeams={() => setShowTeamManagement(true)}
-                        />
-                    ) : (
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowTeamManagement(false)}
-                                className="absolute top-4 right-4 z-10 text-sm text-primary-600 font-semibold hover:underline"
+                    <div className="flex flex-col gap-4">
+                        {/* Sub-Navigation for Teams */}
+                        <div className="flex justify-center p-2 bg-white/80 backdrop-blur-md sticky top-[72px] z-20 shadow-sm gap-2 mx-4 mt-2 rounded-xl">
+                             <button
+                                onClick={() => setTeamView('leaderboard')}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                    teamView === 'leaderboard' 
+                                    ? 'bg-amber-100 text-amber-900 shadow-sm ring-1 ring-amber-200' 
+                                    : 'text-gray-500 hover:bg-gray-100'
+                                }`}
                             >
-                                ← Back to Leaderboard
+                                Leaderboard
                             </button>
-                            <TeamManagement teams={teams} loading={teamsLoading} />
+                            <button
+                                onClick={() => setTeamView('tracking')}
+                                className={`flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                    teamView === 'tracking' 
+                                    ? 'bg-amber-100 text-amber-900 shadow-sm ring-1 ring-amber-200' 
+                                    : 'text-gray-500 hover:bg-gray-100'
+                                }`}
+                            >
+                                <Activity className="w-4 h-4" />
+                                Live Tracking
+                            </button>
+                            <button
+                                onClick={() => setTeamView('management')}
+                                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                    teamView === 'management' 
+                                    ? 'bg-amber-100 text-amber-900 shadow-sm ring-1 ring-amber-200' 
+                                    : 'text-gray-500 hover:bg-gray-100'
+                                }`}
+                            >
+                                Manage
+                            </button>
                         </div>
-                    )
+
+                        <div className="px-4">
+                            {teamView === 'leaderboard' && (
+                                <CoordinatorLeaderboard
+                                    teams={teams}
+                                    clues={clues}
+                                    onManageTeams={() => setTeamView('management')}
+                                />
+                            )}
+                            {teamView === 'tracking' && <LiveProgress />}
+                            {teamView === 'management' && <TeamManagement teams={teams} loading={teamsLoading} />}
+                        </div>
+                    </div>
                 )}
 
                 {activeTab === 'clues' && (

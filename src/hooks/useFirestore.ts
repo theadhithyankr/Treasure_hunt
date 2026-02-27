@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, onSnapshot, orderBy, doc, getDocs, where } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { Team, Clue, Submission, Announcement } from '../types';
+import type { Team, Clue, Submission, Announcement, TreasureConfig } from '../types';
 
 // Hook to fetch all teams
 export function useTeams() {
@@ -169,4 +169,25 @@ export function useTeam(teamId?: string) {
     }, [teamId]);
 
     return { team, loading };
+}
+
+// Hook to fetch treasure config
+export function useTreasureConfig() {
+    const [config, setConfig] = useState<TreasureConfig>({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(doc(db, 'config', 'treasure'), (snapshot) => {
+            if (snapshot.exists()) {
+                setConfig(snapshot.data() as TreasureConfig);
+            } else {
+                setConfig({});
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { config, loading };
 }

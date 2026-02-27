@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Unlock, Search, XCircle, X } from 'lucide-react';
+import { Trophy, Search, XCircle, X } from 'lucide-react';
 import ClueDisplay from '../../components/player/ClueDisplay';
 import Announcements from '../../components/player/Announcements';
 import BottomNav from '../../components/player/BottomNav';
 import MysteryDrawer from '../../components/player/MysteryDrawer';
-import { useClues, useTeam } from '../../hooks/useFirestore';
+import { useClues, useTeam, useTreasureConfig } from '../../hooks/useFirestore';
 import { useMysteryData, useUnlockedEvidence, useTeamAccusation } from '../../hooks/useMystery';
 import { collection, query, orderBy, limit, onSnapshot, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
+import TreasureRevealScreen from '../../components/player/TreasureRevealScreen';
 
 type TabType = 'clues' | 'leaderboard' | 'announcements';
 
@@ -22,7 +23,20 @@ export default function PlayerDashboard() {
 
     const { clues, loading: cluesLoading } = useClues();
     const { team, loading: teamLoading } = useTeam(currentUser?.teamId);
+    const { config: treasureConfig, loading: configLoading } = useTreasureConfig();
     const { mystery } = useMysteryData();
+
+    // If treasure access is granted, show reveal screen
+    if (!teamLoading && team?.treasureApproved && !configLoading) {
+        return (
+            <TreasureRevealScreen
+                teamId={team.id}
+                teamName={team.name}
+                config={treasureConfig}
+                alreadyCompleted={!!team.formulaCompleted}
+            />
+        );
+    }
     const { unlockedEvidence } = useUnlockedEvidence(team?.completedClues || []);
 
     // Rejection toast state

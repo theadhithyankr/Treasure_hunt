@@ -1,6 +1,6 @@
-import { doc, updateDoc, deleteDoc, arrayUnion, addDoc, collection, serverTimestamp, getDocs, query } from 'firebase/firestore';
+import { doc, updateDoc, deleteDoc, arrayUnion, addDoc, collection, serverTimestamp, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { Submission } from '../../types';
+import type { Submission, Clue } from '../../types';
 import { deleteFromCloudinary } from '../../utils/cloudinary';
 import { hapticSuccess, hapticError } from '../../utils/haptics';
 import { Check, PenTool, Camera, QrCode, Trash2, X } from 'lucide-react';
@@ -23,24 +23,37 @@ export default function SubmissionQueue({ submissions, loading }: SubmissionQueu
 
             // Delete submission image from Cloudinary — no longer needed
             if (submission.type === 'photo' && submission.cloudinaryPublicId) {
-                await deleteFromCloudinary(submission.cloudinaryPublicId);
+                // await deleteFromCloudinary(submission.cloudinaryPublicId);
             }
 
-            // Add clue to team's completed clues
-            await updateDoc(doc(db, 'teams', submission.teamId), {
-                completedClues: arrayUnion(submission.clueId)
-            });
+            // Get clues to determine next clue
+            const cluesSnapshot = await getDocs(query(collection(db, 'clues'), orderBy('index')));
+            const clues = cluesSnapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Clue[];
+            const currentClueIndex = clues.findIndex(c => c.id === submission.clueId);
+            const nextClue = currentClueIndex >= 0 && currentClueIndex < clues.length - 1 ? clues[currentClueIndex + 1] : null;
+
+            // Prepare update for team
+            const teamUpdate: any = {
+                completedClues: arrayUnion(submission.clueId),
+                [`clueStatuses.${submission.clueId}.status`]: 'completed',
+                [`clueStatuses.${submission.clueId}.approvedAt`]: serverTimestamp()
+            };
+
+            if (nextClue) {
+                teamUpdate[`clueStatuses.${nextClue.id}.status`] = 'active';
+                teamUpdate[`clueStatuses.${nextClue.id}.unlockedAt`] = serverTimestamp();
+                teamUpdate['currentClueId'] = nextClue.id;
+            }
+
+            // Update team
+            await updateDoc(doc(db, 'teams', submission.teamId), teamUpdate);
 
             // Check if team completed all clues
-            const teamDoc = await getDocs(query(collection(db, 'teams')));
-            const team = teamDoc.docs.find(d => d.id === submission.teamId)?.data();
-            const cluesSnapshot = await getDocs(collection(db, 'clues'));
-            const totalClues = cluesSnapshot.size;
-            const completedClues = (team?.completedClues || []).length + 1; // +1 for the one we just approved
-
-            // If team completed all clues, create auto-announcement
-            if (completedClues === totalClues) {
-                await addDoc(collection(db, 'announcements'), {
+            const totalClues = clues.length;
+            
+            // Just check if we approved the last clue
+            if (!nextClue) {
+                 await addDoc(collection(db, 'announcements'), {
                     title: '🎉 Team Completed!',
                     message: `Congratulations to ${submission.teamName} for completing all ${totalClues} clues! 🏆`,
                     priority: 'high',

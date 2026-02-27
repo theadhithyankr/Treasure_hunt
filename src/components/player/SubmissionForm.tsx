@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, onSnapshot, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import type { Clue } from '../../types';
@@ -117,7 +117,15 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                 status: 'pending',
                 submittedAt: serverTimestamp()
             });
-
+            // Update team status tracking for solving time
+            try {
+                await updateDoc(doc(db, 'teams', currentUser.teamId), {
+                    [`clueStatuses.${clue.id}.status`]: 'pending',
+                    [`clueStatuses.${clue.id}.submittedAt`]: serverTimestamp()
+                });
+            } catch (error) {
+                console.error("Error updating team clue status:", error);
+            }
             hapticSuccess();
             // Reset form — status will update via the onSnapshot listener
             setTextAnswer('');
