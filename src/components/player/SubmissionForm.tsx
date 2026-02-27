@@ -18,7 +18,6 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
     const [textAnswer, setTextAnswer] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [scannedResult, setScannedResult] = useState<string | null>(null);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [statusFromDb, setStatusFromDb] = useState<string | null>(null);
     const [rejectionFeedback, setRejectionFeedback] = useState<string | null>(null);
@@ -63,7 +62,6 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
 
     const handleCameraScan = (result: string) => {
         if (result) {
-            setScannedResult(result);
             setTextAnswer(result);
             setIsCameraOpen(false);
             setIsScanned(true);
@@ -349,11 +347,12 @@ export default function SubmissionForm({ clue }: SubmissionFormProps) {
                 </button>
             </form>
 
-            <CameraScanner
-                isOpen={isCameraOpen}
-                onClose={() => setIsCameraOpen(false)}
-                onScan={handleCameraScan}
-            />
+            {isCameraOpen && (
+                <CameraScanner
+                    onClose={() => setIsCameraOpen(false)}
+                    onScanComplete={handleCameraScan}
+                />
+            )}
         </>
     );
 }
