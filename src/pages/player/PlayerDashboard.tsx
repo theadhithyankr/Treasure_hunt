@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Search, XCircle, X } from 'lucide-react';
+import { Trophy, XCircle, X } from 'lucide-react';
 import ClueDisplay from '../../components/player/ClueDisplay';
 import Announcements from '../../components/player/Announcements';
 import BottomNav from '../../components/player/BottomNav';
-import MysteryDrawer from '../../components/player/MysteryDrawer';
 import { useClues, useTeam, useTreasureConfig } from '../../hooks/useFirestore';
-import { useMysteryData, useUnlockedEvidence, useTeamAccusation } from '../../hooks/useMystery';
 import { collection, query, orderBy, limit, onSnapshot, where, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import TreasureRevealScreen from '../../components/player/TreasureRevealScreen';
@@ -19,12 +17,11 @@ export default function PlayerDashboard() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>('clues');
     const [unreadCount, setUnreadCount] = useState(0);
-    const [mysteryDrawerOpen, setMysteryDrawerOpen] = useState(false);
 
     const { clues, loading: cluesLoading } = useClues();
     const { team, loading: teamLoading } = useTeam(currentUser?.teamId);
     const { config: treasureConfig, loading: configLoading } = useTreasureConfig();
-    const { mystery } = useMysteryData();
+
 
     // If treasure access is granted, show reveal screen
     if (!teamLoading && team?.treasureApproved && !configLoading) {
@@ -37,7 +34,6 @@ export default function PlayerDashboard() {
             />
         );
     }
-    const { unlockedEvidence } = useUnlockedEvidence(team?.completedClues || []);
 
     // Rejection toast state
     const [rejectionToasts, setRejectionToasts] = useState<Array<{ id: string; message: string }>>([]);
@@ -46,23 +42,18 @@ export default function PlayerDashboard() {
     const totalCount = clues.length;
     const completedCount = completedClueIds.length;
 
-    // Check if team has accused
-    const { accusation } = useTeamAccusation(currentUser?.teamId || '');
-
-    // Check if mystery is unlocked for this team
-    // It must be active, they must have found the start clue, AND they shouldn't have solved it yet
-    const isMysterySolved = accusation?.correct === true;
-
-    const isMysteryUnlocked = mystery?.active &&
-        (!mystery.startClueId || completedClueIds.includes(mystery.startClueId)) &&
-        !isMysterySolved;
-
-    // Check if mystery is "in progress" (unlocked but not yet accused/revealed)
-    const isMysteryInProgress = isMysteryUnlocked && !accusation && !mystery.revealed;
-
     // Find current clue (first incomplete clue)
     const currentClue = clues.find(clue => !completedClueIds.includes(clue.id));
     const currentClueIndex = currentClue ? clues.findIndex(c => c.id === currentClue.id) : -1;
+
+    // Show "New Level Unlocked" message if more than 8 clues completed and no current clue (or just as a milestone)
+    // Actually, user said: "after 8 clues show the text saying new level unlocked"
+    // Assuming this means INSTEAD of the 9th clue, or as a persistent message?
+    // Let's assume it blocks them until they act, or just replaces the view.
+    // "We are doing it offline after 8 clues" implies the app stops giving clues.
+    
+    // If completed >= 8 and we want to stop them:
+    const showOfflineMessage = completedCount >= 8;
 
     // Listen for rejection notifications pushed by coordinator
     useEffect(() => {
@@ -163,42 +154,18 @@ export default function PlayerDashboard() {
     }
 
     return (
-        <div className={`min-h-screen pb-20 transition-colors duration-1000 ${isMysteryUnlocked
-            ? 'bg-slate-900 text-slate-100'
-            : 'bg-gradient-to-br from-blue-50 via-white to-orange-50'
-            }`}>
+        <div className="min-h-screen pb-20 bg-gradient-to-br from-blue-50 via-white to-orange-50 transition-colors duration-1000">
             {/* Header */}
-            <header className={`${isMysteryUnlocked
-                ? 'bg-slate-800/90 border-slate-700 shadow-purple-900/20'
-                : 'bg-gradient-primary text-white shadow-glow-primary'
-                } backdrop-blur-md sticky top-0 z-10 px-4 py-3 border-b border-transparent transition-all duration-1000`}>
+            <header className="bg-gradient-primary text-white shadow-glow-primary backdrop-blur-md sticky top-0 z-10 px-4 py-3 border-b border-transparent transition-all duration-1000">
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
-                        <h1 className={`text-xl font-bold truncate ${isMysteryUnlocked
-                            ? 'text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-red-400'
-                            : 'text-white'
-                            }`}>
-                            {isMysteryUnlocked ? '🕵️ Murder Mystery' : (currentUser?.teamName || team?.name)}
+                        <h1 className="text-xl font-bold truncate text-white">
+                            {currentUser?.teamName || team?.name}
                         </h1>
-                        {isMysteryInProgress && (
-                            <p className="text-sm text-red-400 font-semibold animate-pulse">
-                                ⚠️ Mystery in Progress
-                            </p>
-                        )}
-                        {isMysterySolved && (
-                            <p className="text-sm">
-                                <span className="px-2 py-0.5 bg-green-500/20 backdrop-blur-sm border border-green-400/30 rounded-full text-xs font-bold text-green-100">
-                                    ✓ Case Solved
-                                </span>
-                            </p>
-                        )}
                     </div>
                     <button
                         onClick={handleSignOut}
-                        className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${isMysteryUnlocked
-                            ? 'bg-slate-700 text-slate-200 hover:bg-slate-600'
-                            : 'bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/40'
-                            }`}
+                        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all bg-white/20 backdrop-blur-sm text-white hover:bg-white/30 active:bg-white/40"
                     >
                         Sign Out
                     </button>
@@ -209,20 +176,24 @@ export default function PlayerDashboard() {
             <main className="p-4 safe-area-bottom">
                 {activeTab === 'clues' && (
                     !cluesLoading && !teamLoading ? (
-                        isMysteryInProgress ? (
+                        showOfflineMessage ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center space-y-6 animate-fade-in">
-                                <div className="bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-2xl max-w-sm w-full">
-                                    <div className="text-6xl mb-4">🕵️‍♀️</div>
-                                    <h2 className="text-2xl font-bold text-white mb-2">Mystery Unlocked!</h2>
-                                    <p className="text-slate-400 mb-6">
-                                        A crime has been committed. You must solve the mystery before continuing the treasure hunt.
+                                <div className="bg-slate-900 p-8 rounded-3xl border border-amber-500/30 shadow-2xl max-w-sm w-full relative overflow-hidden">
+                                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-shimmer" />
+                                    <div className="text-6xl mb-4 animate-bounce">🚪🗝️</div>
+                                    <h2 className="text-2xl font-bold text-amber-500 mb-2">New Level Unlocked!</h2>
+                                    <p className="text-slate-300 font-mono text-sm leading-relaxed">
+                                        You have proven your worth by solving 8 clues.
+                                        <br/><br/>
+                                        The next phase is strictly offline.
+                                        <br/>
+                                        <span className="text-white font-bold">Contact a coordinator to proceed.</span>
                                     </p>
-                                    <button
-                                        onClick={() => setMysteryDrawerOpen(true)}
-                                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-red-600 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-purple-500/20 active:scale-95 transition-all animate-pulse"
-                                    >
-                                        Open Case File
-                                    </button>
+                                    <div className="mt-6 flex justify-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+                                        <span className="w-2 h-2 rounded-full bg-white opacity-50"></span>
+                                        <span className="w-2 h-2 rounded-full bg-white opacity-50"></span>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
@@ -232,15 +203,12 @@ export default function PlayerDashboard() {
                                     clueIndex={currentClueIndex}
                                     totalClues={totalCount}
                                     completedClues={completedCount}
-                                    isMysteryTheme={isMysteryUnlocked}
                                 />
                             ) : (
-                                <div className={`card text-center py-12 ${isMysteryUnlocked ? 'bg-slate-800 border-slate-700' : ''
-                                    }`}>
+                                <div className="card text-center py-12">
                                     <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-                                    <h2 className={`text-2xl font-bold mb-2 ${isMysteryUnlocked ? 'text-white' : 'text-gray-900'
-                                        }`}>All Clues Completed!</h2>
-                                    <p className={isMysteryUnlocked ? 'text-slate-400' : 'text-gray-600'}>
+                                    <h2 className="text-2xl font-bold mb-2 text-gray-900">All Clues Completed!</h2>
+                                    <p className="text-gray-600">
                                         Congratulations! You've solved all the clues! 🎉
                                     </p>
                                 </div>
@@ -254,7 +222,7 @@ export default function PlayerDashboard() {
                 )}
 
                 {activeTab === 'announcements' && (
-                    <Announcements isMysteryTheme={isMysteryUnlocked} />
+                    <Announcements />
                 )}
             </main>
 
@@ -263,23 +231,7 @@ export default function PlayerDashboard() {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 unreadAnnouncementsCount={unreadCount}
-                isMysteryTheme={isMysteryUnlocked}
             />
-
-            {/* Mystery Drawer Button */}
-            {isMysteryUnlocked && (
-                <button
-                    onClick={() => setMysteryDrawerOpen(true)}
-                    className="fixed top-20 right-4 z-30 w-14 h-14 bg-gradient-to-br from-purple-600 to-red-600 text-white rounded-full shadow-2xl hover:shadow-purple-500/50 active:scale-95 transition-all flex items-center justify-center animate-bounce-slow"
-                >
-                    <Search className="w-6 h-6" />
-                    {unlockedEvidence.length > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold shadow-lg border-2 border-slate-900">
-                            {unlockedEvidence.length}
-                        </span>
-                    )}
-                </button>
-            )}
 
             {/* Rejection Toasts */}
             <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 w-[calc(100%-2rem)] max-w-sm pointer-events-none">
@@ -302,15 +254,6 @@ export default function PlayerDashboard() {
                     </div>
                 ))}
             </div>
-
-            {/* Mystery Drawer */}
-            <MysteryDrawer
-                isOpen={mysteryDrawerOpen}
-                onClose={() => setMysteryDrawerOpen(false)}
-                teamId={currentUser?.teamId || ''}
-                teamName={currentUser?.teamName || ''}
-                completedClues={completedClueIds}
-            />
         </div>
     );
 }

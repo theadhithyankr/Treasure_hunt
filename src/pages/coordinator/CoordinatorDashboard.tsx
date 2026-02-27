@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, FileText, Check, Megaphone, Search, Activity } from 'lucide-react';
+import { Users, FileText, Check, Megaphone, Activity } from 'lucide-react';
 import TeamManagement from '../../components/coordinator/TeamManagement';
 import ClueManagement from '../../components/coordinator/ClueManagement';
 import SubmissionQueue from '../../components/coordinator/SubmissionQueue';
 import BroadcastPanel from '../../components/coordinator/BroadcastPanel';
-import MysteryManagement from '../../components/coordinator/MysteryManagement';
 import CoordinatorLeaderboard from '../../components/coordinator/CoordinatorLeaderboard';
 import LiveProgress from '../../components/coordinator/LiveProgress';
 import { useTeams, useClues, useSubmissions } from '../../hooks/useFirestore';
 
-type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast' | 'mystery';
+type TabType = 'teams' | 'clues' | 'submissions' | 'broadcast';
 type TeamViewType = 'leaderboard' | 'management' | 'tracking';
 
 export default function CoordinatorDashboard() {
@@ -115,10 +114,6 @@ export default function CoordinatorDashboard() {
                 {activeTab === 'broadcast' && (
                     <BroadcastPanel />
                 )}
-
-                {activeTab === 'mystery' && (
-                    <MysteryManagement />
-                )}
             </main>
 
             {/* Bottom Navigation */}
@@ -171,17 +166,6 @@ export default function CoordinatorDashboard() {
                     >
                         <Megaphone className="w-6 h-6" />
                         <span className="text-xs mt-1 font-semibold">News</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('mystery')}
-                        className={`flex flex-col items-center p-2 min-w-[70px] rounded-xl transition-all ${activeTab === 'mystery'
-                            ? 'bg-gradient-primary text-white shadow-glow-primary'
-                            : 'text-gray-600 hover:bg-primary-50'
-                            }`}
-                    >
-                        <Search className="w-6 h-6" />
-                        <span className="text-xs mt-1 font-semibold">Mystery</span>
                     </button>
                 </div>
             </nav>

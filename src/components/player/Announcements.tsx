@@ -11,11 +11,7 @@ interface Announcement {
     priority: 'low' | 'medium' | 'high';
 }
 
-interface AnnouncementsProps {
-    isMysteryTheme?: boolean;
-}
-
-export default function Announcements({ isMysteryTheme }: AnnouncementsProps) {
+export default function Announcements() {
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -72,15 +68,15 @@ export default function Announcements({ isMysteryTheme }: AnnouncementsProps) {
     return (
         <div className="px-4 py-6">
             <h2 className="text-2xl font-bold text-center mb-6 flex items-center justify-center gap-2">
-                <Megaphone className={`w-6 h-6 ${isMysteryTheme ? 'text-purple-500' : 'text-primary-500'}`} />
-                <span className={isMysteryTheme ? 'text-white' : 'bg-gradient-primary bg-clip-text text-transparent'}>Announcements</span>
+                <Megaphone className="w-6 h-6 text-primary-500" />
+                <span className="bg-gradient-primary bg-clip-text text-transparent">Announcements</span>
             </h2>
 
             {announcements.length === 0 ? (
-                <div className={`card text-center py-12 ${isMysteryTheme ? 'bg-slate-800 border-slate-700' : ''}`}>
-                    <Megaphone className={`w-16 h-16 mx-auto mb-4 ${isMysteryTheme ? 'text-slate-600' : 'text-gray-300'}`} />
-                    <h3 className={`text-lg font-semibold mb-2 ${isMysteryTheme ? 'text-slate-300' : 'text-gray-700'}`}>No Announcements Yet</h3>
-                    <p className={`text-sm ${isMysteryTheme ? 'text-slate-500' : 'text-gray-500'}`}>
+                <div className="card text-center py-12">
+                    <Megaphone className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-semibold mb-2 text-gray-700">No Announcements Yet</h3>
+                    <p className="text-sm text-gray-500">
                         Check back later for updates from coordinators
                     </p>
                 </div>
@@ -89,24 +85,21 @@ export default function Announcements({ isMysteryTheme }: AnnouncementsProps) {
                     {announcements.map((announcement) => (
                         <div
                             key={announcement.id}
-                            className={`rounded-2xl p-4 border-l-4 ${isMysteryTheme
-                                    ? 'bg-slate-800/80 backdrop-blur-sm border-purple-500'
-                                    : `glass ${getPriorityColor(announcement.priority)}`
-                                }`}
+                            className={`rounded-2xl p-4 border-l-4 glass ${getPriorityColor(announcement.priority)}`}
                         >
                             <div className="flex items-start gap-3">
-                                <div className="flex-shrink-0 mt-1">
+                                <div className="mt-1 flex-shrink-0">
                                     {getPriorityIcon(announcement.priority)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className={`font-bold text-lg mb-1 ${isMysteryTheme ? 'text-slate-100' : 'text-gray-900'}`}>
+                                    <h3 className="font-bold text-lg mb-1 text-gray-900">
                                         {announcement.title}
                                     </h3>
-                                    <p className={`text-sm leading-relaxed ${isMysteryTheme ? 'text-slate-300' : 'text-gray-700'}`}>
+                                    <p className="text-sm leading-relaxed text-gray-700">
                                         {announcement.message}
                                     </p>
                                     {announcement.createdAt && (
-                                        <p className={`text-xs mt-2 ${isMysteryTheme ? 'text-slate-500' : 'text-gray-500'}`}>
+                                        <p className="text-xs mt-2 text-gray-500">
                                             {new Date(announcement.createdAt.toDate()).toLocaleString()}
                                         </p>
                                     )}
