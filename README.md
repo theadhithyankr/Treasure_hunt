@@ -1,52 +1,42 @@
-# Treasure Hunt
+# Treasure Hunt App
 
-## Overview
-Treasure Hunt is a Firebase-backed web app for running a treasure hunt with separate player and coordinator flows. It includes authentication, protected dashboards, setup pages, Firebase rules, and deployment configuration.
+Firebase-backed treasure hunt web app with player and coordinator dashboards.
 
-## Features
-- Player and coordinator login flows.
-- Protected role-based dashboards.
-- Firebase, Firestore, and storage configuration files.
-- Setup and troubleshooting documents for permissions and CORS.
-- Vite development and mobile-oriented dev script.
+## Key Features
+- Firebase-backed treasure hunt web app with player and coordinator dashboards
+- Firebase or Genkit files are documented where the repository uses them for app services or AI workflows.
+- Includes management-facing screens such as admin, dashboard, or coordinator workflows where present.
+- Organized UI components and screens make the main user flows visible from the project structure.
+- Package scripts provide reproducible development, build, and preview commands.
 
 ## Tech Stack
-- TypeScript
+- JavaScript/TypeScript
 - React
 - Vite
-- Firebase
 - Tailwind CSS
+- Firebase
+- HTML/CSS
 
-## Development
-Install dependencies:
+## Project Structure
+- src/app or app - application routes, screens, and layout files.
+- components - reusable UI and workflow components.
+- public / assets - static images, icons, manifests, and visual assets.
+- src/scenes and src/config - game scenes, paytables, reel strips, and runtime configuration.
 
+## Setup and Run
 ```bash
+git clone https://github.com/theadhithyankr/treasure-hunt-app.git
+cd treasure-hunt-app
 npm install
-```
-
-Start the development server:
-
-```bash
 npm run dev
-```
-
-Start the mobile-oriented dev server:
-
-```bash
-npm run dev:mobile
-```
-
-Build for production:
-
-```bash
 npm run build
-```
-
-Preview the production build:
-
-```bash
 npm run preview
 ```
 
-## Status
-Treasure hunt app with coordinator and player workflows plus Firebase setup assets.
+## What This Project Demonstrates
+- Building user-facing web applications with component-based UI and modern frontend tooling.
+- Integrating managed backend services for auth, persistence, realtime data, or app infrastructure.
+- Presenting project scope, setup, and technical choices clearly for reviewers and recruiters.
+
+## Repository
+- GitHub: https://github.com/theadhithyankr/treasure-hunt-app
